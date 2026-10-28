@@ -14,6 +14,7 @@ import { ConnectionsPage } from './features/settings/ConnectionsPage';
 import { TeamPage } from './features/settings/TeamPage';
 import { PoliciesPage } from './features/settings/PoliciesPage';
 import { ExternalReportPage } from './features/tasks/ExternalReportPage';
+import { ChatPage } from './features/chat/ChatPage';
 
 // 픽셀 사무실은 라우트를 열 때만 렌더러·에셋을 불러온다.
 const PixelOfficePage = lazy(() => import('./features/pixel-office/PixelOfficePage').then(m => ({ default: m.PixelOfficePage })));
@@ -50,6 +51,8 @@ export default function App() {
   let params: Record<string, string> | null;
   if (path === '/office') page = <DashboardPage />;
   else if (path === '/office/room') page = <Suspense fallback={<p className="empty">픽셀 사무실 불러오는 중…</p>}><PixelOfficePage /></Suspense>;
+  else if (path === '/chat') page = <ChatPage threadId={null} />;
+  else if ((params = match('/chat/:id', path))) page = <ChatPage threadId={params.id} />;
   else if (path === '/projects') page = <ProjectsPage />;
   else if (path === '/tasks') page = <TasksPage />;
   else if (path === '/tasks/new') page = <NewTaskPage />;
@@ -68,6 +71,7 @@ export default function App() {
       <nav className="app-nav" aria-label="주 메뉴">
         <div className="brand">바이브코딩인력사무소</div>
         <NavLink to="/office" current={is('/office')}>사무실</NavLink>
+        <NavLink to="/chat" current={is('/chat')}>대화</NavLink>
         <NavLink to="/projects" current={is('/projects')}>프로젝트</NavLink>
         <NavLink to="/tasks" current={is('/tasks')}>작업함</NavLink>
         <NavLink to="/approvals" current={is('/approvals')} badge={pending}>승인함</NavLink>

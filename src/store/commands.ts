@@ -9,7 +9,7 @@ import type {
 } from '../domain/types';
 
 export type Command =
-  | { type: 'create_task'; project_id: string; assignee_member_id: string | null; title: string; goal: string; done_criteria: string; idempotency_key: string }
+  | { type: 'create_task'; project_id: string; assignee_member_id: string | null; title: string; goal: string; done_criteria: string; idempotency_key: string; task_id?: string }
   | { type: 'submit_external_report'; task_id: string; member_id: string; status: ExternalReportStatus; note: string; link: string | null; idempotency_key: string }
   | { type: 'decide_approval'; approval_id: string; decision: ApprovalDecision; expected_revision: number; idempotency_key: string }
   | { type: 'request_cancel'; run_id: string; idempotency_key: string }
@@ -59,12 +59,12 @@ function hasKey(ws: Workspace, key: string): boolean {
 export function applyCommand(ws: Workspace, cmd: Command, nowIso: string): Workspace {
   switch (cmd.type) {
     case 'create_task': {
-      if (hasKey(ws, cmd.idempotency_key)) return ws;
+      if (hasKey(ws, cmd.idempotency_key) || (cmd.task_id && ws.tasks.some(t => t.task_id === cmd.task_id))) return ws;
       if (!ws.projects.some(p => p.project_id === cmd.project_id)) throw new CommandError('프로젝트가 없습니다.', 'not_found');
       if (cmd.assignee_member_id && !ws.members.some(m => m.member_id === cmd.assignee_member_id)) throw new CommandError('담당 팀원이 없습니다.', 'not_found');
       if (!cmd.title.trim()) throw new CommandError('제목이 필요합니다.', 'invalid');
       const task: Task = {
-        task_id: `${cmd.project_id}-${slug('T', ws, ws.tasks.length)}-${cmd.idempotency_key}`,
+        task_id: cmd.task_id ?? `${cmd.project_id}-${slug('T', ws, ws.tasks.length)}-${cmd.idempotency_key}`,
         project_id: cmd.project_id,
         assignee_member_id: cmd.assignee_member_id,
         revision: 1,

@@ -39,7 +39,7 @@ KEY_PATH = BASE / "serviceAccount.json"
 RUNS_DIR = BASE / "runs"
 PROJECTS_DIR = BASE / "projects"
 ACTIVE_RUN = {"queued", "leased", "starting", "running", "waiting_input", "stopping"}
-VERSION = "0.4.0"
+VERSION = "0.5.0"
 
 
 def now_iso() -> str:
@@ -188,6 +188,36 @@ class Ledger:
     def read(self) -> dict:
         return self.ref.get().to_dict() or {}
 
+    # ----- 대화방 (workspaces/{uid}/threads/{id})
+    def queued_threads(self) -> list:
+        col = self.ref.collection("threads")
+        try:
+            docs = list(col.where("status", "==", "queued").limit(10).stream())
+        except Exception:  # noqa: BLE001 — 색인 문제 등
+            docs = [d for d in col.limit(100).stream() if (d.to_dict() or {}).get("status") == "queued"]
+        out = [d.to_dict() for d in docs]
+        out.sort(key=lambda t: ((t.get("pending") or {}).get("requested_at") or ""))
+        return out
+
+    def thread_read(self, thread_id: str) -> dict:
+        return self.ref.collection("threads").document(thread_id).get().to_dict() or {}
+
+    def thread_mutate(self, thread_id: str, fn):
+        ref = self.ref.collection("threads").document(thread_id)
+        tx = self.db.transaction()
+        fs = self.fs
+
+        @fs.transactional
+        def run(transaction):
+            snap = ref.get(transaction=transaction)
+            t = snap.to_dict() or {}
+            if fn(t):
+                t["updated_at"] = now_iso()
+                transaction.set(ref, t)
+            return t
+
+        return run(tx)
+
 
 def next_seq(ws: dict) -> int:
     m = 0
@@ -214,7 +244,16 @@ class RunProcess:
         self.exit_code = None
         self.error = None
         self.cancelled = False
+        self.session_id = None
+        self.progress: list = []
         self.thread = threading.Thread(target=self._run, daemon=True)
+
+    def note(self, text: str):
+        text = text.strip()
+        if text and (not self.progress or self.progress[-1] != text):
+            self.progress.append(text[:200])
+            if len(self.progress) > 60:
+                self.progress = self.progress[-60:]
 
     def start(self):
         self.thread.start()
@@ -251,26 +290,41 @@ class RunProcess:
             ev = json.loads(line)
         except Exception:  # noqa: BLE001
             return
+        if ev.get("session_id") and not self.session_id:
+            self.session_id = str(ev.get("session_id"))
         # Claude Code stream-json
         if ev.get("type") == "assistant":
             for c in (ev.get("message") or {}).get("content", []) or []:
                 if c.get("type") == "tool_use":
-                    cmd = str((c.get("input") or {}).get("command", ""))
+                    inp = c.get("input") or {}
+                    cmd = str(inp.get("command", ""))
                     self.phase = "testing" if any(k in cmd for k in ("test", "pytest", "vitest", "lint", "tsc")) else "implementing"
+                    name = c.get("name", "")
+                    target = inp.get("file_path") or inp.get("path") or inp.get("pattern") or cmd
+                    self.note(f"{name}: {str(target)[:120]}")
+                elif c.get("type") == "text" and c.get("text"):
+                    self.note("💬 " + str(c.get("text"))[:160])
         elif ev.get("type") == "result":
             self.result_text = str(ev.get("result") or "")[:4000]
         # Gemini CLI stream-json
         elif ev.get("type") == "tool_use":
-            cmd = str((ev.get("input") or ev.get("args") or {}).get("command", ""))
+            inp = ev.get("input") or ev.get("args") or {}
+            cmd = str(inp.get("command", ""))
             self.phase = "testing" if any(k in cmd for k in ("test", "pytest", "vitest", "lint", "tsc")) else "implementing"
+            self.note(f"{ev.get('name', 'tool')}: {str(inp.get('file_path') or inp.get('path') or cmd)[:120]}")
         elif ev.get("type") == "message" and ev.get("role") == "assistant" and ev.get("content"):
             self.result_text = str(ev.get("content"))[:4000]
         # Codex exec --json
+        elif ev.get("type") == "thread.started" and ev.get("thread_id"):
+            self.session_id = str(ev.get("thread_id"))
         elif ev.get("type") in ("item.completed", "item.started"):
             item = ev.get("item") or {}
             if item.get("type") == "command_execution":
                 cmd = str(item.get("command", ""))
                 self.phase = "testing" if any(k in cmd for k in ("test", "pytest", "vitest", "lint", "tsc")) else "implementing"
+                self.note("명령: " + cmd[:120])
+            elif item.get("type") in ("file_change", "patch") and ev.get("type") == "item.completed":
+                self.note("파일 변경")
             elif item.get("type") == "agent_message" and ev.get("type") == "item.completed":
                 self.result_text = str(item.get("text") or "")[:4000]
 
@@ -321,16 +375,25 @@ def _gemini_supports(tool_path: str, token: str) -> bool:
     return token in _HELP_CACHE[tool_path]
 
 
-def build_command(tool_key: str, tool_path: str) -> list:
+def build_command(tool_key: str, tool_path: str, read_only: bool = False, resume: str | None = None) -> list:
     if tool_key == "claude":
-        allowed = "Read,Edit,Write,MultiEdit,Grep,Glob,LS,Bash(npm test*),Bash(npm run*),Bash(npx vitest*),Bash(npx tsc*),Bash(python -m pytest*),Bash(git status*),Bash(git diff*),Bash(git log*)"
-        return [tool_path, "-p", "--output-format", "stream-json", "--verbose", "--permission-mode", "acceptEdits", "--allowedTools", allowed]
+        allowed = ("Read,Grep,Glob,LS,Bash(git status*),Bash(git diff*),Bash(git log*)" if read_only else
+                   "Read,Edit,Write,MultiEdit,Grep,Glob,LS,Bash(npm test*),Bash(npm run*),Bash(npx vitest*),Bash(npx tsc*),Bash(python -m pytest*),Bash(git status*),Bash(git diff*),Bash(git log*)")
+        cmd = [tool_path, "-p", "--output-format", "stream-json", "--verbose", "--allowedTools", allowed]
+        if not read_only:
+            cmd += ["--permission-mode", "acceptEdits"]
+        if resume:
+            cmd += ["--resume", resume]
+        return cmd
     if tool_key == "codex":
-        return [tool_path, "exec", "--json", "--sandbox", "workspace-write", "-"]
+        base = [tool_path, "exec"]
+        if resume:
+            base += ["resume", resume]
+        return base + ["--json", "--sandbox", "read-only" if read_only else "workspace-write", "-"]
     if tool_key == "gemini":
         # 프롬프트는 stdin 으로 전달. 파일 수정은 자동 승인, 셸 명령은 비대화형이라 거부됨.
         fmt = "stream-json" if _gemini_supports(tool_path, "stream-json") else "json"
-        mode = ["--approval-mode", "auto_edit"] if _gemini_supports(tool_path, "--approval-mode") else []
+        mode = ["--approval-mode", "auto_edit"] if (not read_only and _gemini_supports(tool_path, "--approval-mode")) else []
         return [tool_path, "--output-format", fmt, *mode]
     raise ValueError(tool_key)
 
@@ -351,6 +414,7 @@ class Runner:
         self.active_member_id = None
         self.active_tool_key = None
         self.last_confirm_write = 0.0
+        self.chat = None  # 진행 중인 대화 턴 {thread_id, turn, rp, run_id, tool_key, member_id, mode, last_relay}
 
     # ----- 등록·heartbeat
     def register_and_heartbeat(self):
@@ -594,6 +658,244 @@ class Runner:
         log(f"실행 종료 {run_id}: {status} (exit {rp.exit_code})")
         self.active = self.active_run_id = self.active_task_id = self.active_member_id = self.active_tool_key = None
 
+    # ----- 채팅 모드: 대화방 턴 실행
+    MAX_TRANSCRIPT = 12
+
+    def _member_tool(self, member_id: str):
+        for key, spec in self.cfg["tools"].items():
+            if spec["member_id"] == member_id and self.tools.get(key, {}).get("status") != "not_installed":
+                return key
+        return None
+
+    def _thread_msg(self, t: dict, role: str, kind: str, text: str, member_id=None, run_id=None, replace_last_progress=False):
+        msgs = t.setdefault("messages", [])
+        if replace_last_progress and msgs and msgs[-1].get("kind") == "progress" and msgs[-1].get("run_id") == run_id:
+            msgs[-1]["text"] = text[:4000]
+            msgs[-1]["at"] = now_iso()
+            return
+        msgs.append({"message_id": f"msg-{uuid.uuid4().hex[:12]}", "role": role, "member_id": member_id, "kind": kind,
+                     "text": text[:8000], "at": now_iso(), "run_id": run_id})
+        if len(msgs) > 300:
+            del msgs[:len(msgs) - 300]
+
+    def _transcript(self, t: dict, limit: int) -> str:
+        lines = []
+        for m in [m for m in t.get("messages", []) if m.get("kind") in ("chat", "result", "review")][-limit:]:
+            who = "소유자" if m.get("role") == "owner" else (m.get("member_id") or "사무실")
+            lines.append(f"[{who}] {str(m.get('text', ''))[:1500]}")
+        return "\n".join(lines)
+
+    def _git_diff_text(self, pdir: Path, limit=30000) -> str:
+        if not (pdir / ".git").exists():
+            return "(git 저장소 아님)"
+        self._git(pdir, "add", "-N", ".")
+        code, stat = self._git(pdir, "diff", "--stat")
+        code2, diff = self._git(pdir, "diff")
+        text = (stat or "") + "\n\n" + (diff or "")
+        return text[:limit] + ("\n…(이하 생략)" if len(text) > limit else "")
+
+    def check_chat(self, ws: dict):
+        """진행 중 턴 중계·종료, 없으면 큐에서 하나 시작 (작업 카드 실행과 합쳐 PC당 1개)."""
+        if self.chat:
+            self._chat_tick(ws)
+            return
+        if self.active is not None:
+            return
+        for t in self.ledger.queued_threads():
+            pend = t.get("pending") or {}
+            member = pend.get("member_id") or t.get("member_id")
+            if pend.get("mode") == "publish":
+                self._chat_publish(t)
+                return
+            tool_key = self._member_tool(member)
+            if not tool_key:
+                self.ledger.thread_mutate(t["thread_id"], lambda th: (self._thread_msg(th, "system", "error", f"{member} 는 이 PC 에 연결된 도구가 아닙니다."), th.update({"status": "idle", "pending": None}), True)[-1])
+                continue
+            self._chat_start(t, tool_key, member, pend)
+            return
+
+    def _chat_start(self, t: dict, tool_key: str, member_id: str, pend: dict):
+        thread_id = t["thread_id"]
+        mode = pend.get("mode", "chat")
+        ws = self.ledger.read()
+        pdir = self.project_dir(t["project_id"], ws)
+        run_id = f"run-{dt.datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
+        now = now_iso()
+        # 장부: run + task 상태
+        def wfn(w: dict) -> bool:
+            w.setdefault("runs", []).append({
+                "run_id": run_id, "task_id": thread_id, "member_id": member_id, "device_id": self.cfg["device_id"],
+                "status": "running", "evidence_source": "runner_observed", "last_confirmed_at": now,
+                "phase": "reviewing" if mode == "review" else "implementing", "started_at": now, "sequence": next_seq(w),
+                "cancel_requested_at": None, "cancel_delivery": "none", "tool": tool_key, "chat": True,
+            })
+            for task in w.get("tasks", []):
+                if task.get("task_id") == thread_id:
+                    task["status"] = "active"; task["assignee_member_id"] = member_id; task["updated_at"] = now
+            return True
+        self.ledger.mutate(wfn)
+        # 프롬프트
+        owner_text = ""
+        if pend.get("message_id"):
+            m = next((x for x in t.get("messages", []) if x.get("message_id") == pend["message_id"]), None)
+            owner_text = str(m.get("text", "")) if m else ""
+        sessions = t.get("sessions") or {}
+        resume = sessions.get(tool_key) if tool_key in ("claude", "codex") and mode != "review" else None
+        header = (f"[바이브코딩인력사무소 · 프로젝트 {t.get('project_id')} · 대화방 {thread_id}]\n"
+                  f"작업 폴더: {pdir}. 이 폴더 안의 파일만 읽고 수정한다. git push·커밋·배포·외부 전송·비밀정보 출력 금지.\n"
+                  "답은 한국어로, 사실만. 끝에 '변경한 파일 / 검사 결과 / 남은 일'을 짧게 요약한다.\n")
+        if mode == "review":
+            prompt = (header + "\n[읽기 전용 교차 검토] 아래는 동료 AI 가 만든 변경(diff)과 대화 내용이다. 파일을 수정하지 말고, "
+                      "버그·누락·위험·개선점을 중요도 순으로 한국어로 보고하라. 문제가 없으면 '문제 없음'이라고 명시하라.\n\n"
+                      f"[대화]\n{self._transcript(t, self.MAX_TRANSCRIPT)}\n\n[변경 내용]\n{self._git_diff_text(pdir)}\n")
+        elif resume:
+            prompt = owner_text or "(지시 없음)"
+        else:
+            prior = self._transcript(t, self.MAX_TRANSCRIPT)
+            prompt = header + (f"\n[지금까지의 대화]\n{prior}\n" if prior else "") + f"\n[새 지시]\n{owner_text or '(지시 없음)'}\n"
+        cmd = build_command(tool_key, self.tools[tool_key]["path"], read_only=(mode == "review"), resume=resume)
+        rp = RunProcess(run_id, cmd, pdir, prompt, RUNS_DIR / f"{run_id}.log", int(self.cfg["run_timeout_minutes"]))
+        rp.start()
+        self.chat = {"thread_id": thread_id, "turn": pend, "rp": rp, "run_id": run_id, "tool_key": tool_key, "member_id": member_id, "mode": mode, "last_relay": 0.0, "resume_used": bool(resume)}
+        self.ledger.thread_mutate(thread_id, lambda th: (th.update({"status": "running"}), self._thread_msg(th, "member", "progress", "시작…", member_id, run_id), True)[-1])
+        log(f"대화 턴 시작 {thread_id} ({tool_key}, {mode}{', resume' if resume else ''})")
+
+    def _chat_tick(self, ws: dict):
+        c = self.chat; rp = c["rp"]
+        run = next((r for r in ws.get("runs", []) if r.get("run_id") == c["run_id"]), None)
+        if run and run.get("cancel_requested_at") and run.get("cancel_delivery") in ("pending", "none") and rp.alive():
+            self._set_run(c["run_id"], status="stopping", cancel_delivery="delivered"); rp.kill(); time.sleep(2)
+        if rp.alive():
+            if rp.timed_out():
+                rp.kill(); time.sleep(2)
+            elif time.time() - c["last_relay"] >= 5:
+                c["last_relay"] = time.time()
+                self._set_run(c["run_id"], status="running", phase=rp.phase)
+                if rp.progress:
+                    text = "\n".join(rp.progress[-12:])
+                    self.ledger.thread_mutate(c["thread_id"], lambda th: (self._thread_msg(th, "member", "progress", text, c["member_id"], c["run_id"], replace_last_progress=True), True)[-1])
+            if rp.alive():
+                return
+        self._chat_finish()
+
+    def _set_run(self, run_id: str, **fields):
+        def fn(w: dict) -> bool:
+            r = next((x for x in w.get("runs", []) if x.get("run_id") == run_id), None)
+            if not r:
+                return False
+            r.update(fields); r["last_confirmed_at"] = now_iso(); return True
+        self.ledger.mutate(fn)
+
+    def _chat_finish(self):
+        c = self.chat; rp = c["rp"]
+        cancelled = rp.cancelled; timed_out = rp.timed_out() and not cancelled
+        ok = (rp.exit_code == 0) and not cancelled and not timed_out and not rp.error
+        status = "cancelled" if cancelled else ("failed" if not ok else "succeeded")
+        now = now_iso()
+        result = rp.result_text.strip()
+        if not ok and not result:
+            result = f"실행이 정상 종료되지 않았습니다 (exit={rp.exit_code}{', 시간 초과' if timed_out else ''}{', 중지됨' if cancelled else ''}). 로그: {rp.log_path}"
+            if c.get("resume_used"):
+                result += "\n(이전 대화 이어가기에 실패했을 수 있습니다. 다시 보내면 새 대화로 시작합니다.)"
+        mode, member_id, thread_id = c["mode"], c["member_id"], c["thread_id"]
+
+        def wfn(w: dict) -> bool:
+            r = next((x for x in w.get("runs", []) if x.get("run_id") == c["run_id"]), None)
+            if r:
+                r.update({"status": status, "last_confirmed_at": now, "finished_at": now, "exit_code": rp.exit_code,
+                          "cancel_delivery": "confirmed" if cancelled else r.get("cancel_delivery", "none")})
+            for task in w.get("tasks", []):
+                if task.get("task_id") == thread_id and task.get("status") not in ("done", "cancelled"):
+                    task["status"] = "review" if ok else "blocked"; task["updated_at"] = now
+            w.setdefault("artifacts", []).append({"artifact_id": f"art-{c['run_id']}-log", "task_id": thread_id, "member_id": member_id,
+                                                  "title": f"실행 로그 {c['run_id']}", "kind": "file", "reference": str(rp.log_path), "content_hash": None, "submitted_at": now})
+            return True
+        self.ledger.mutate(wfn)
+
+        def tfn(t: dict) -> bool:
+            # 진행 메시지 정리 후 결과 추가
+            msgs = t.get("messages", [])
+            if msgs and msgs[-1].get("kind") == "progress" and msgs[-1].get("run_id") == c["run_id"]:
+                msgs[-1]["text"] = "\n".join(rp.progress[-20:]) or "(진행 기록 없음)"
+            self._thread_msg(t, "member", "review" if mode == "review" else ("result" if ok else "error"), result or "(응답 없음)", member_id, c["run_id"])
+            if rp.session_id and (not c.get("resume_used") or ok) and mode != "review":
+                t.setdefault("sessions", {})[c["tool_key"]] = rp.session_id
+            if not ok and c.get("resume_used"):
+                t.setdefault("sessions", {}).pop(c["tool_key"], None)
+            t["status"] = "idle"; t["pending"] = None
+            # 자동 교차 검토 1회 + 수정 1회 (무한 토론 방지)
+            reviewer = t.get("auto_review_member_id")
+            if ok and mode == "chat" and reviewer and reviewer != member_id and not t.get("auto_review_done"):
+                t["auto_review_done"] = True
+                t["pending"] = {"turn_id": f"turn-{uuid.uuid4().hex[:10]}", "member_id": reviewer, "mode": "review", "message_id": None, "requested_at": now}
+                t["status"] = "queued"
+                self._thread_msg(t, "system", "chat", f"자동 검토 요청 → {reviewer} (읽기 전용, 1회)")
+            elif ok and mode == "review" and reviewer and not t.get("auto_fix_done") and t.get("auto_review_done") and "문제 없음" not in result:
+                t["auto_fix_done"] = True
+                mid = f"msg-{uuid.uuid4().hex[:12]}"
+                t.setdefault("messages", []).append({"message_id": mid, "role": "system", "member_id": None, "kind": "chat", "at": now,
+                                                     "text": "검토 의견 중 타당한 지적을 반영해 수정하라. 동의하지 않는 지적은 이유를 적고 넘어가라. (자동 수정 1회)"})
+                t["pending"] = {"turn_id": f"turn-{uuid.uuid4().hex[:10]}", "member_id": t.get("member_id"), "mode": "chat", "message_id": mid, "requested_at": now}
+                t["status"] = "queued"
+            return True
+        self.ledger.thread_mutate(thread_id, tfn)
+        if ok:
+            self.tools[c["tool_key"]]["tested"] = True
+        log(f"대화 턴 종료 {thread_id}: {status}")
+        self.chat = None
+
+    def _chat_publish(self, t: dict):
+        """소유자 '반영' → main 에 커밋·푸시. AI 호출 없음."""
+        thread_id = t["thread_id"]; now = now_iso()
+        ws = self.ledger.read()
+        proj = next((p for p in ws.get("projects", []) if p.get("project_id") == t.get("project_id")), None) or {}
+        pdir = self.project_dir(t["project_id"], ws)
+        res = {"status": "failed", "message": "", "at": now, "commit": None}
+        if not which("git") or not (pdir / ".git").exists():
+            res["message"] = "git 저장소가 아니거나 git 이 없습니다."
+        else:
+            code, out = self._git(pdir, "status", "--porcelain")
+            if code == 0 and not out:
+                res.update({"status": "nothing", "message": "바뀐 파일이 없습니다."})
+            else:
+                title = str(t.get("title") or "변경")[:60]
+                steps = (("add", "-A"), ("commit", "-m", f"{title} (CBAO 대화 {thread_id}, 소유자 반영)"))
+                ok = True
+                for args in steps:
+                    code, out = self._git(pdir, *args)
+                    if code != 0:
+                        res["message"] = f"git {args[0]} 실패: {out[-300:]}"; ok = False; break
+                if ok:
+                    code, out = self._git(pdir, "pull", "--rebase", "origin", "main", timeout=300)
+                    if code != 0:
+                        self._git(pdir, "rebase", "--abort")
+                        res["message"] = f"원격 변경과 충돌: {out[-300:]}"; ok = False
+                if ok:
+                    code, out = self._git(pdir, "push", "origin", "HEAD:main", timeout=600)
+                    if code != 0:
+                        res["message"] = f"push 실패 (GitHub 로그인 확인): {out[-300:]}"
+                    else:
+                        _, sha = self._git(pdir, "rev-parse", "HEAD")
+                        res.update({"status": "pushed", "message": f"{proj.get('repo_reference') or ''} main 에 반영했습니다.", "commit": sha})
+        def tfn(th: dict) -> bool:
+            th["last_publish"] = res
+            if res["status"] == "pushed":
+                th["publish_count"] = int(th.get("publish_count", 0)) + 1
+            self._thread_msg(th, "system", "publish" if res["status"] != "failed" else "error", res["message"])
+            th["status"] = "idle"; th["pending"] = None
+            return True
+        self.ledger.thread_mutate(thread_id, tfn)
+        if res["status"] == "pushed":
+            def wfn(w: dict) -> bool:
+                for task in w.get("tasks", []):
+                    if task.get("task_id") == thread_id:
+                        task["status"] = "done"; task["updated_at"] = now; task["revision"] = int(task.get("revision", 1)) + 1
+                w.setdefault("artifacts", []).append({"artifact_id": f"art-pub-{res['commit'][:7]}", "task_id": thread_id, "member_id": t.get("member_id"),
+                                                      "title": f"main 반영 커밋 {res['commit'][:7]}", "kind": "link", "reference": f"https://github.com/{proj.get('repo_reference')}/commit/{res['commit']}" if proj.get("repo_reference") and not str(proj.get("repo_reference")).startswith("http") else str(res["commit"]), "content_hash": res["commit"], "submitted_at": now})
+                return True
+            self.ledger.mutate(wfn)
+        log(f"반영 {thread_id}: {res['status']} {res['message']}")
+
     # ----- GitHub 에 올리기 (소유자 요청 시에만, 검토용 브랜치)
     def handle_publish(self, ws: dict):
         for t in ws.get("tasks", []):
@@ -674,7 +976,8 @@ class Runner:
                     ws = self.ledger.read()
                     self.check_active(ws)
                     self.handle_publish(ws)
-                    if self.active is None:
+                    self.check_chat(ws)
+                    if self.active is None and self.chat is None:
                         picked = self.pick_task(ws)
                         if picked:
                             self.start_run(*picked)
@@ -687,6 +990,12 @@ class Runner:
             log("종료 중…")
             if self.active:
                 self.active.kill()
+            if self.chat:
+                self.chat["rp"].kill()
+                try:
+                    self.ledger.thread_mutate(self.chat["thread_id"], lambda th: (th.update({"status": "idle", "pending": None}), self._thread_msg(th, "system", "error", "심부름꾼이 종료되어 턴이 중단되었습니다. 다시 보내 주세요."), True)[-1])
+                except Exception:  # noqa: BLE001
+                    pass
             self.mark_offline()
 
 

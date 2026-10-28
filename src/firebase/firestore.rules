@@ -18,6 +18,11 @@ service cloud.firestore {
       allow create, update: if isOwner() && request.auth.uid == uid
         && request.resource.data.is_demo == false;
       allow delete: if false;
+      // 대화방 (채팅 모드)
+      match /threads/{threadId} {
+        allow read, create, update: if isOwner() && request.auth.uid == uid;
+        allow delete: if isOwner() && request.auth.uid == uid;
+      }
     }
     // 그 밖의 모든 경로는 차단 (Runner 이벤트 등은 다음 단계에서 별도 규칙으로 연다)
     match /{document=**} {
