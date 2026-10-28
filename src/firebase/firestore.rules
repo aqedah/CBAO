@@ -1,0 +1,27 @@
+rules_version = '2';
+// CBAO Firestore 규칙 — 소유자 1인만 자기 workspace 를 읽고 쓴다.
+// 공개 주소(GitHub Pages)에서 열어도, 아래 이메일로 구글 로그인한 사람만 통과한다.
+// 다른 계정을 허용하려면 OWNER_EMAILS 에 추가하고 다시 "게시" 한다.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function ownerEmails() {
+      return ['aqedah22@gmail.com'];
+    }
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in ownerEmails();
+    }
+    // workspaces/{uid}: 문서 ID 가 로그인한 사용자의 uid 와 같아야 한다.
+    match /workspaces/{uid} {
+      allow read: if isOwner() && request.auth.uid == uid;
+      allow create, update: if isOwner() && request.auth.uid == uid
+        && request.resource.data.is_demo == false;
+      allow delete: if false;
+    }
+    // 그 밖의 모든 경로는 차단 (Runner 이벤트 등은 다음 단계에서 별도 규칙으로 연다)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

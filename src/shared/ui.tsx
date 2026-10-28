@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { getStore, useStoreState } from '../store/workspaceStore';
 import type { ColorToken } from '../domain/viewModel';
+import { firebaseConfigured } from '../store/providers/firebaseProvider';
 
 export function Badge({ tone, children, title }: { tone: ColorToken | 'demo' | 'count'; children: ReactNode; title?: string }) {
   return <span className={`badge ${tone}`} title={title}>{children}</span>;
@@ -44,7 +45,7 @@ export function DemoBanner() {
     <div className="demo-banner" role="status">
       <span>데모 데이터 — 실제 실행·연결·보고가 아닙니다. 가짜 fixture 를 보고 있습니다.</span>
       <button type="button" onClick={() => void getStore().command({ type: 'demo_refresh' })}>데모 시각 새로고침</button>
-      <button type="button" onClick={() => void getStore().switchSource(import.meta.env.VITE_AI_OFFICE_API ? 'http' : 'local')}>데모 끄기</button>
+      <button type="button" onClick={() => void getStore().switchSource(firebaseConfigured ? 'firebase' : import.meta.env.VITE_AI_OFFICE_API ? 'http' : 'local')}>데모 끄기</button>
     </div>
   );
 }
@@ -57,7 +58,7 @@ export function SourceLine() {
   const ws = useStoreState(s => s.workspace);
   const now = useServerNow();
   const info = getStore().providerInfo;
-  const label = status === 'ready' ? '정상' : status === 'loading' ? '불러오는 중' : status === 'not_configured' ? '미설정' : status === 'error' ? '오류' : '대기';
+  const label = status === 'ready' ? '정상' : status === 'loading' ? '불러오는 중' : status === 'not_configured' ? '미설정' : status === 'auth_required' ? '로그인 필요' : status === 'error' ? '오류' : '대기';
   return (
     <div className="source-line">
       <span>데이터: <strong>{info.label}</strong> · {label}</span>

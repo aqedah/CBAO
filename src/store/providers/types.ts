@@ -1,7 +1,7 @@
 import type { Workspace } from '../../domain/types';
 import type { Command } from '../commands';
 
-export type DataSource = 'http' | 'local' | 'demo';
+export type DataSource = 'firebase' | 'http' | 'local' | 'demo';
 
 export interface ProviderInfo {
   id: DataSource;

@@ -11,8 +11,9 @@ import { ProviderNotConfiguredError } from './providers/types';
 import { createDemoProvider } from './providers/demoProvider';
 import { createLocalProvider } from './providers/localProvider';
 import { createHttpProvider } from './providers/httpProvider';
+import { createFirebaseProvider, firebaseConfigured, AuthRequiredError } from './providers/firebaseProvider';
 
-export type StoreStatus = 'idle' | 'loading' | 'ready' | 'error' | 'not_configured';
+export type StoreStatus = 'idle' | 'loading' | 'ready' | 'error' | 'not_configured' | 'auth_required';
 
 export interface StoreState {
   source: DataSource;
@@ -34,13 +35,15 @@ function readDefaultSource(): DataSource {
   try {
     if (sessionStorage.getItem(DEMO_SESSION_KEY) === '1') return 'demo';
     const saved = localStorage.getItem(SOURCE_KEY);
-    if (saved === 'http' || saved === 'local') return saved;
+    if (saved === 'http' || saved === 'local' || (saved === 'firebase' && firebaseConfigured)) return saved;
   } catch { /* storage 없음 */ }
+  if (firebaseConfigured) return 'firebase';
   return import.meta.env.VITE_AI_OFFICE_API ? 'http' : 'local';
 }
 
 export function createProvider(source: DataSource): WorkspaceProvider {
   if (source === 'demo') return createDemoProvider();
+  if (source === 'firebase') return createFirebaseProvider();
   if (source === 'http') return createHttpProvider(import.meta.env.VITE_AI_OFFICE_API as string | undefined);
   let storage: Storage | null = null;
   try { storage = localStorage; } catch { storage = null; }
@@ -93,8 +96,8 @@ export class WorkspaceStore {
       ) ?? null;
     } catch (e) {
       if (token !== this.loadToken) return;
-      const notConfigured = e instanceof ProviderNotConfiguredError;
-      this.set({ status: notConfigured ? 'not_configured' : 'error', error: e instanceof Error ? e.message : String(e) });
+      const status: StoreStatus = e instanceof ProviderNotConfiguredError ? 'not_configured' : e instanceof AuthRequiredError ? 'auth_required' : 'error';
+      this.set({ status, error: e instanceof Error ? e.message : String(e) });
     }
   }
 
