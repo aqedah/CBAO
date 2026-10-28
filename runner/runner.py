@@ -39,7 +39,7 @@ KEY_PATH = BASE / "serviceAccount.json"
 RUNS_DIR = BASE / "runs"
 PROJECTS_DIR = BASE / "projects"
 ACTIVE_RUN = {"queued", "leased", "starting", "running", "waiting_input", "stopping"}
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 
 def now_iso() -> str:
@@ -417,10 +417,27 @@ class Runner:
         t = candidates[0]
         return t, my_members[t["assignee_member_id"]]
 
-    def project_dir(self, project_id: str) -> Path:
-        override = self.cfg.get("projects", {}).get(project_id)
-        p = Path(override) if override else PROJECTS_DIR / project_id
-        p.mkdir(parents=True, exist_ok=True)
+    def project_dir(self, project_id: str, ws: dict | None = None) -> Path:
+        """작업 폴더 결정: config.projects[ID 또는 이름] > C:\\CBAO\\projects\\<이름>. 없고 repo_reference 가 있으면 git clone."""
+        proj = next((p for p in (ws or {}).get("projects", []) if p.get("project_id") == project_id), None) or {}
+        name = str(proj.get("name") or project_id).strip()
+        safe = "".join(ch for ch in name if ch.isalnum() or ch in "-_.")[:48] or project_id
+        override = self.cfg.get("projects", {}).get(project_id) or self.cfg.get("projects", {}).get(name)
+        p = Path(override) if override else PROJECTS_DIR / safe
+        if not p.exists():
+            repo = str(proj.get("repo_reference") or "").strip()
+            if repo:
+                url = repo if repo.startswith("http") else f"https://github.com/{repo}.git"
+                git = which("git")
+                if not git:
+                    log("git 이 설치되어 있지 않아 저장소를 내려받을 수 없습니다. https://git-scm.com 에서 설치하세요. 빈 폴더로 진행합니다.")
+                else:
+                    log(f"저장소 내려받기: {url} → {p}")
+                    p.parent.mkdir(parents=True, exist_ok=True)
+                    r = subprocess.run([git, "clone", url, str(p)], capture_output=True, timeout=600)
+                    if r.returncode != 0:
+                        log("내려받기 실패: " + (r.stderr or r.stdout).decode("utf-8", errors="replace")[-400:])
+            p.mkdir(parents=True, exist_ok=True)
         return p
 
     def start_run(self, task: dict, tool_key: str):
@@ -450,7 +467,7 @@ class Runner:
         if not any(r.get("run_id") == run_id for r in ws.get("runs", [])):
             log("실행 시작 취소 (작업 상태가 바뀜)")
             return
-        pdir = self.project_dir(task["project_id"])
+        pdir = self.project_dir(task["project_id"], ws)
         cmd = build_command(tool_key, self.tools[tool_key]["path"])
         rp = RunProcess(run_id, cmd, pdir, build_prompt(task, pdir), RUNS_DIR / f"{run_id}.log", int(cfg["run_timeout_minutes"]))
         rp.start()
