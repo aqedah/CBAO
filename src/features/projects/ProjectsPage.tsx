@@ -4,6 +4,33 @@ import { CommandError, newIdempotencyKey } from '../../store/commands';
 
 const CANDIDATES = ['MILAL', 'MILALWV', 'CBSR', 'CBWP'];
 
+function ProjectRow({ p }: { p: { project_id: string; name: string; purpose: string; repo_reference: string | null; archived: boolean } }) {
+  const [edit, setEdit] = useState(false);
+  const [purpose, setPurpose] = useState(p.purpose);
+  const [repo, setRepo] = useState(p.repo_reference ?? '');
+  const [err, setErr] = useState<string | null>(null);
+  const save = async () => {
+    setErr(null);
+    try { await getStore().command({ type: 'update_project', project_id: p.project_id, patch: { purpose, repo_reference: repo.trim() || null } }); setEdit(false); }
+    catch (e) { setErr(e instanceof CommandError ? e.message : '저장 실패'); }
+  };
+  return (
+    <li>
+      <div className="row"><strong>{p.name}</strong> <span className="meta">{p.project_id}</span><span className="spacer" />
+        <button type="button" className="btn small" onClick={() => setEdit(v => !v)}>{edit ? '취소' : '수정'}</button></div>
+      {!edit && <div className="meta">{p.purpose || '목적 없음'} · 저장소 {p.repo_reference ?? '없음 (심부름꾼은 빈 폴더에서 시작)'}</div>}
+      {edit && (
+        <div className="stack" style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
+          <input value={purpose} onChange={e => setPurpose(e.target.value)} placeholder="목적" style={{ padding: 8, border: '1px solid var(--line)', borderRadius: 6 }} />
+          <input value={repo} onChange={e => setRepo(e.target.value)} placeholder="저장소 참조 예: aqedah/CBSR" style={{ padding: 8, border: '1px solid var(--line)', borderRadius: 6 }} />
+          {err && <div className="notice error">{err}</div>}
+          <div className="row"><button type="button" className="btn primary small" onClick={() => void save()}>저장</button></div>
+        </div>
+      )}
+    </li>
+  );
+}
+
 export function ProjectsPage() {
   const ws = useStoreState(s => s.workspace);
   const [name, setName] = useState('');
@@ -22,7 +49,7 @@ export function ProjectsPage() {
       <div className="grid-2">
         <section className="card"><h2>등록된 프로젝트</h2>
           {ws.projects.length === 0 ? <p className="empty">아직 없습니다. 등록 후보: {CANDIDATES.join(', ')} (경로·원격·권한은 확인 후 저장)</p> : (
-            <ul className="list">{ws.projects.map(p => <li key={p.project_id}><strong>{p.name}</strong> <span className="meta">{p.project_id}</span><div className="meta">{p.purpose}{p.repo_reference ? ` · ${p.repo_reference}` : ''}</div></li>)}</ul>
+            <ul className="list">{ws.projects.map(p => <ProjectRow key={p.project_id} p={p} />)}</ul>
           )}
         </section>
         <section className="card"><h2>프로젝트 등록</h2>

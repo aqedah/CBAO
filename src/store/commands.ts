@@ -17,6 +17,7 @@ export type Command =
   | { type: 'register_member'; display_name: string; role_label: string; execution_mode: ExecutionMode; tool_label: string; idempotency_key: string }
   | { type: 'update_member'; member_id: string; patch: Partial<Pick<Member, 'display_name' | 'role_label' | 'execution_mode' | 'tool_label'>> }
   | { type: 'register_project'; name: string; purpose: string; repo_reference: string | null; idempotency_key: string }
+  | { type: 'update_project'; project_id: string; patch: Partial<Pick<Project, 'name' | 'purpose' | 'repo_reference' | 'archived'>> }
   | { type: 'update_ui'; patch: Partial<UiSettings> }
   | { type: 'mark_task_status'; task_id: string; status: Task['status']; expected_revision: number }
   | { type: 'request_run'; task_id: string; expected_revision: number; idempotency_key: string }
@@ -175,6 +176,11 @@ export function applyCommand(ws: Workspace, cmd: Command, nowIso: string): Works
         name: cmd.name.trim(), purpose: cmd.purpose, repo_reference: cmd.repo_reference, archived: false,
       };
       return bump({ ...ws, projects: [...ws.projects, project] }, nowIso);
+    }
+    case 'update_project': {
+      if (!ws.projects.some(p => p.project_id === cmd.project_id)) throw new CommandError('프로젝트가 없습니다.', 'not_found');
+      if (cmd.patch.repo_reference && !/^([\w.-]+\/[\w.-]+|https:\/\/[^\s]+)$/.test(cmd.patch.repo_reference)) throw new CommandError('저장소 참조는 owner/repo 또는 https 주소여야 합니다.', 'invalid');
+      return bump({ ...ws, projects: ws.projects.map(p => p.project_id === cmd.project_id ? { ...p, ...cmd.patch } : p) }, nowIso);
     }
     case 'update_ui':
       // UI 설정 변경은 업무 revision 을 올리지 않는다.
