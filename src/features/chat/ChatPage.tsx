@@ -97,6 +97,7 @@ export function ChatPage({ threadId }: { threadId: string | null }) {
             {thread.status === 'running' && <Badge tone="active">{memberName(thread.pending?.member_id ?? thread.member_id)} 실행 중</Badge>}
             {thread.status === 'queued' && <><Badge tone="attention">Runner 대기</Badge><button type="button" className="btn small" onClick={() => void act(() => cancelPending(thread.thread_id), '취소했습니다.')}>취소</button></>}
             <a className="btn small" href={href(`/tasks/${thread.thread_id}`)}>작업 카드</a>
+            {thread.sessions?.claude && <span className="meta" title="PC 터미널에서 같은 대화를 이어가려면">터미널: <code>claude --resume {thread.sessions.claude}</code></span>}
           </div>
         )}
         <div className="chat-messages">

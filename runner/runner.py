@@ -39,7 +39,7 @@ KEY_PATH = BASE / "serviceAccount.json"
 RUNS_DIR = BASE / "runs"
 PROJECTS_DIR = BASE / "projects"
 ACTIVE_RUN = {"queued", "leased", "starting", "running", "waiting_input", "stopping"}
-VERSION = "0.5.0"
+VERSION = "0.6.0"
 
 
 def now_iso() -> str:
@@ -262,9 +262,10 @@ class RunProcess:
         try:
             with open(self.log_path, "a", encoding="utf-8") as lf:
                 lf.write(f"# run {self.run_id}\n# cwd {self.cwd}\n# cmd {' '.join(self.cmd)}\n# started {now_iso()}\n\n")
+                env = dict(os.environ); env["CBAO_RUN_ID"] = self.run_id
                 self.proc = subprocess.Popen(
                     self.cmd, cwd=str(self.cwd), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                    text=True, encoding="utf-8", errors="replace", bufsize=1,
+                    text=True, encoding="utf-8", errors="replace", bufsize=1, env=env,
                     creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
                 )
                 try:
@@ -398,7 +399,107 @@ def build_command(tool_key: str, tool_path: str, read_only: bool = False, resume
     raise ValueError(tool_key)
 
 
-# ---------------------------------------------------------------- 메인 루프
+# ---------------------------------------------------------------- 관찰형 연결 (Claude Code 훅)
+OBSERVE_DIR = BASE / "observe"
+EVENTS_PATH = OBSERVE_DIR / "events.jsonl"
+HOOK_EVENTS = ("SessionStart", "UserPromptSubmit", "PreToolUse", "Stop", "SessionEnd")
+OBSERVE_STALE_SEC = 15 * 60
+
+
+def install_claude_hooks() -> str:
+    """~/.claude/settings.json 에 훅을 등록한다(없을 때만). 다른 설정은 건드리지 않고 백업을 남긴다."""
+    settings = Path.home() / ".claude" / "settings.json"
+    hook_py = RUNNER_DIR / "hook.py"
+    py = "py -3" if shutil.which("py") else "python"
+    command = f'{py} "{hook_py}"'
+    try:
+        data = {}
+        if settings.exists():
+            data = json.loads(settings.read_text(encoding="utf-8") or "{}")
+        hooks = data.setdefault("hooks", {})
+        changed = False
+        for ev in HOOK_EVENTS:
+            entries = hooks.setdefault(ev, [])
+            if any("hook.py" in json.dumps(e) for e in entries):
+                continue
+            entries.append({"hooks": [{"type": "command", "command": command, "timeout": 10}]})
+            changed = True
+        if changed:
+            if settings.exists():
+                shutil.copy2(settings, settings.with_suffix(".json.cbao-backup"))
+            settings.parent.mkdir(parents=True, exist_ok=True)
+            settings.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            return f"훅 등록: {settings}"
+        return "훅 이미 등록됨"
+    except Exception as e:  # noqa: BLE001
+        return f"훅 등록 실패: {e}"
+
+
+class Observer:
+    """events.jsonl 을 꼬리 읽기해서 터미널에서 직접 실행한 Claude Code 세션을 장부에 '관찰형'으로 기록한다."""
+
+    def __init__(self, runner):
+        self.runner = runner
+        self.pos = 0
+        self.sessions: dict = {}  # session_id -> {cwd, title, started, last, phase, ended, run_id, task_id}
+        OBSERVE_DIR.mkdir(parents=True, exist_ok=True)
+        if EVENTS_PATH.exists():
+            self.pos = EVENTS_PATH.stat().st_size  # 과거 기록은 무시하고 지금부터
+
+    def tick(self):
+        # 진행 중 세션은 매 주기 '살아 있음'을 갱신한다 (훅 이벤트가 뜸해도 30초 안에 끊김으로 보이지 않게, 최대 15분)
+        live = [s for s in self.sessions.values() if not s["ended"]]
+        if live and (time.time() - getattr(self, "_last_refresh", 0)) >= 20:
+            self._last_refresh = time.time()
+            self.runner.record_observed(live)
+        new = []
+        try:
+            if EVENTS_PATH.exists():
+                with open(EVENTS_PATH, "r", encoding="utf-8", errors="replace") as f:
+                    f.seek(self.pos)
+                    for line in f:
+                        line = line.strip()
+                        if line:
+                            try:
+                                new.append(json.loads(line))
+                            except Exception:  # noqa: BLE001
+                                pass
+                    self.pos = f.tell()
+        except Exception:  # noqa: BLE001
+            return
+        changed = set()
+        now = time.time()
+        for ev in new:
+            if ev.get("cbao_run_id") or not ev.get("session_id"):
+                continue  # 심부름꾼이 띄운 세션은 이미 기록된다
+            sid = ev["session_id"]
+            s = self.sessions.setdefault(sid, {"cwd": ev.get("cwd") or "", "title": None, "started": now, "last": now, "phase": "implementing", "ended": False, "run_id": f"obs-{sid[:12]}", "task_id": f"obs-{sid[:12]}", "tools": 0})
+            s["last"] = now
+            kind = ev.get("event")
+            if kind == "UserPromptSubmit":
+                s["waiting"] = False; s["ended"] = False
+                if ev.get("prompt") and not s["title"]:
+                    s["title"] = ev["prompt"]
+            if kind == "PreToolUse":
+                s["waiting"] = False
+                s["tools"] += 1
+                target = str(ev.get("target") or "")
+                s["phase"] = "testing" if any(k in target for k in ("test", "pytest", "vitest", "lint", "tsc")) else ("reviewing" if ev.get("tool") in ("Read", "Grep", "Glob") and s["tools"] < 4 else "implementing")
+            if kind == "Stop":
+                s["waiting"] = True  # 답을 마치고 사용자의 다음 입력을 기다리는 중
+            if kind == "SessionEnd":
+                s["ended"] = True
+            changed.add(sid)
+        # 오래 조용한 세션은 종료된 것으로 본다 (훅이 Stop 을 못 보낸 경우)
+        for sid, s in self.sessions.items():
+            if not s["ended"] and now - s["last"] > OBSERVE_STALE_SEC:
+                s["ended"] = True; s["stale"] = True; changed.add(sid)
+        if changed:
+            self.runner.record_observed([self.sessions[sid] for sid in changed])
+        for sid in [k for k, v in self.sessions.items() if v["ended"] and now - v["last"] > 3600]:
+            del self.sessions[sid]
+
+
 class Runner:
     def __init__(self):
         self.cfg = load_config()
@@ -415,6 +516,9 @@ class Runner:
         self.active_tool_key = None
         self.last_confirm_write = 0.0
         self.chat = None  # 진행 중인 대화 턴 {thread_id, turn, rp, run_id, tool_key, member_id, mode, last_relay}
+        if self.tools.get("claude", {}).get("status") != "not_installed":
+            log(install_claude_hooks())
+        self.observer = Observer(self)
 
     # ----- 등록·heartbeat
     def register_and_heartbeat(self):
@@ -896,6 +1000,58 @@ class Runner:
             self.ledger.mutate(wfn)
         log(f"반영 {thread_id}: {res['status']} {res['message']}")
 
+    # ----- 관찰형 실행 기록 (터미널에서 직접 실행한 Claude Code)
+    def record_observed(self, sessions: list):
+        cfg = self.cfg
+        member_id = cfg["tools"]["claude"]["member_id"]
+        now = now_iso()
+
+        def fn(ws: dict) -> bool:
+            projects = ws.setdefault("projects", [])
+            if not any(p.get("project_id") == "terminal" for p in projects):
+                projects.append({"project_id": "terminal", "name": "터미널(직접 실행)", "purpose": "사무실 밖에서 직접 실행한 Claude Code 세션의 관찰 기록", "repo_reference": None, "archived": False})
+            tasks = ws.setdefault("tasks", []); runs = ws.setdefault("runs", [])
+            for s in sessions:
+                # 작업 폴더가 등록된 프로젝트 폴더면 그 프로젝트로 귀속
+                project_id = "terminal"
+                cwd = str(s.get("cwd") or "")
+                for p in projects:
+                    pdir = str(PROJECTS_DIR / str(p.get("name") or ""))
+                    override = cfg.get("projects", {}).get(p.get("project_id")) or cfg.get("projects", {}).get(p.get("name"))
+                    if cwd and (cwd.lower().startswith(pdir.lower()) or (override and cwd.lower().startswith(str(override).lower()))):
+                        project_id = p["project_id"]; break
+                folder = Path(cwd).name if cwd else "?"
+                title = f"터미널 작업 · {folder}" + (f" — {s['title']}" if s.get("title") else "")
+                t = next((x for x in tasks if x.get("task_id") == s["task_id"]), None)
+                if t is None:
+                    t = {"task_id": s["task_id"], "project_id": project_id, "assignee_member_id": member_id, "revision": 1, "status": "active",
+                         "title": title, "goal": "사무실 밖(터미널)에서 직접 지시한 작업. 사무실은 관찰만 한다.", "done_criteria": "", "created_at": now, "updated_at": now,
+                         "sequence": next_seq(ws), "observed": True}
+                    tasks.append(t)
+                t["title"] = title; t["updated_at"] = now
+                r = next((x for x in runs if x.get("run_id") == s["run_id"]), None)
+                if r is None:
+                    r = {"run_id": s["run_id"], "task_id": s["task_id"], "member_id": member_id, "device_id": cfg["device_id"], "status": "running",
+                         "evidence_source": "runner_observed", "last_confirmed_at": now, "phase": s.get("phase", "implementing"), "started_at": now,
+                         "sequence": next_seq(ws) + 1, "cancel_requested_at": None, "cancel_delivery": "none", "tool": "claude", "observed": True}
+                    runs.append(r)
+                r["last_confirmed_at"] = now; r["phase"] = s.get("phase", "implementing")
+                if s.get("ended"):
+                    if r["status"] in ACTIVE_RUN:
+                        r["status"] = "lost" if s.get("stale") else "succeeded"; r["finished_at"] = now
+                    if t.get("status") == "active":
+                        t["status"] = "review"
+                else:
+                    r["status"] = "waiting_input" if s.get("waiting") else "running"
+                    if t.get("status") != "active":
+                        t["status"] = "active"
+            return True
+
+        try:
+            self.ledger.mutate(fn)
+        except Exception as e:  # noqa: BLE001
+            log(f"관찰 기록 실패: {e}")
+
     # ----- GitHub 에 올리기 (소유자 요청 시에만, 검토용 브랜치)
     def handle_publish(self, ws: dict):
         for t in ws.get("tasks", []):
@@ -973,6 +1129,7 @@ class Runner:
             while True:
                 try:
                     self.register_and_heartbeat()
+                    self.observer.tick()
                     ws = self.ledger.read()
                     self.check_active(ws)
                     self.handle_publish(ws)

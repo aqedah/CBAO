@@ -69,6 +69,8 @@ export interface Run {
   /** 중지 요청이 서버에 접수되었지만 Runner에 전달·종료 확인이 되지 않은 상태. */
   cancel_requested_at: string | null;
   cancel_delivery: 'none' | 'pending' | 'delivered' | 'confirmed';
+  /** 사무실 밖(터미널)에서 직접 실행한 세션을 훅으로 관찰한 기록. 중지·반영 불가 */
+  observed?: boolean;
 }
 
 export interface ExternalReport {

@@ -83,7 +83,8 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
                   <div className="meta">근거: {EVIDENCE_LABEL[r.evidence_source]} · 마지막 확인 {formatTime(r.last_confirmed_at)}</div>
                   {r.cancel_requested_at && <div className="meta">중지 요청 {formatTime(r.cancel_requested_at)} · {r.cancel_delivery === 'pending' ? '전달 대기' : r.cancel_delivery === 'delivered' ? '전달됨 · 종료 미확인' : r.cancel_delivery === 'confirmed' ? '종료 확인' : ''}</div>}
                   {r.status === 'succeeded' && <div className="dim-note">실행 종료는 업무 완료가 아닙니다. 결과물 제출과 승인은 별도입니다.</div>}
-                  {member?.capabilities.request_cancel && ['starting', 'running', 'waiting_input'].includes(r.status) && (
+                  {r.observed && <div className="dim-note">터미널에서 직접 실행한 세션 — 사무실은 관찰만 합니다 (중지·반영 불가)</div>}
+                  {member?.capabilities.request_cancel && !r.observed && ['starting', 'running', 'waiting_input'].includes(r.status) && (
                     <button className="btn small danger" type="button" onClick={() => void requestCancel(r.run_id)} style={{ marginTop: 6 }}>중지 요청</button>
                   )}
                 </li>

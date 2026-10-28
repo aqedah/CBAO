@@ -115,7 +115,8 @@ export function MemberDrawer({ model, nowMs, onClose, projectFilter, privacy }: 
             {member.execution_mode === 'external' && member.task && <button type="button" className="btn" onClick={() => void copyBundle()}>지시 묶음 복사</button>}
             {member.execution_mode === 'external' && serviceUrl && <a className="btn" href={serviceUrl} target="_blank" rel="noopener noreferrer">서비스 열기</a>}
             {member.execution_mode === 'external' && member.task && <a className="btn" href={href(`/tasks/${member.task.task_id}/external-report`)}>결과 등록</a>}
-            {view.canRequestCancel && <button type="button" className="btn danger" onClick={() => void requestCancel()}>중지 요청</button>}
+            {view.canRequestCancel && !run?.observed && <button type="button" className="btn danger" onClick={() => void requestCancel()}>중지 요청</button>}
+            {run?.observed && <span className="badge muted">터미널에서 직접 실행 중 · 관찰만</span>}
           </div>
           {member.execution_mode === 'external' && <p className="meta" style={{ marginTop: 8 }}>외부 서비스의 현재 상태는 자동 관찰하지 않습니다. 시작·완료는 직접 보고로 기록됩니다.</p>}
         </>
