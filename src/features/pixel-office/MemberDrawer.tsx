@@ -109,6 +109,7 @@ export function MemberDrawer({ model, nowMs, onClose, projectFilter, privacy }: 
           )}
           <div className="row" style={{ marginTop: 12 }}>
             {member.task && <a className="btn primary" href={href(`/tasks/${member.task.task_id}`)}>작업 열기</a>}
+            {view.pendingOwnerCount > 0 && <a className="btn" href={href('/approvals')}>승인함 열기 ({view.pendingOwnerCount})</a>}
             <a className="btn" href={href('/tasks/new', { project: projectFilter ?? member.task?.project_id ?? null, assignee: member.member_id })}>이 담당에게 새 지시</a>
             <a className="btn" href={href('/records')}>자료 보기</a>
             {member.execution_mode === 'external' && member.task && <button type="button" className="btn" onClick={() => void copyBundle()}>지시 묶음 복사</button>}
