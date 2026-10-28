@@ -19,6 +19,7 @@ export type Command =
   | { type: 'register_project'; name: string; purpose: string; repo_reference: string | null; idempotency_key: string }
   | { type: 'update_ui'; patch: Partial<UiSettings> }
   | { type: 'mark_task_status'; task_id: string; status: Task['status']; expected_revision: number }
+  | { type: 'request_run'; task_id: string; expected_revision: number; idempotency_key: string }
   | { type: 'demo_refresh' };
 
 export class CommandError extends Error {
@@ -184,6 +185,17 @@ export function applyCommand(ws: Workspace, cmd: Command, nowIso: string): Works
       if (task.revision !== cmd.expected_revision) throw new CommandError('작업 revision 이 달라졌습니다.', 'conflict');
       if (cmd.status === 'done') throw new CommandError('완료는 승인함에서 승인으로만 처리합니다.', 'forbidden');
       return bump({ ...ws, tasks: ws.tasks.map(t => t.task_id === task.task_id ? { ...t, status: cmd.status, revision: t.revision + 1, updated_at: nowIso } : t) }, nowIso);
+    }
+    case 'request_run': {
+      const task = ws.tasks.find(t => t.task_id === cmd.task_id);
+      if (!task) throw new CommandError('작업이 없습니다.', 'not_found');
+      if (task.revision !== cmd.expected_revision) throw new CommandError('작업 revision 이 달라졌습니다.', 'conflict');
+      const member = ws.members.find(m => m.member_id === task.assignee_member_id);
+      if (!member || (member.execution_mode !== 'managed' && member.execution_mode !== 'observed')) throw new CommandError('관리형 연결 팀원에게 배정된 작업만 실행 요청할 수 있습니다.', 'forbidden');
+      if (!['ready', 'needs_changes'].includes(task.status)) throw new CommandError('준비됨/보완 필요 상태의 작업만 실행 요청할 수 있습니다.', 'invalid');
+      if (task.run_requested_at) return ws;
+      // 실행 요청만 기록한다. 실제 실행 시작·상태 변경은 Runner 가 PC당 1개 규칙으로 처리한다.
+      return bump({ ...ws, tasks: ws.tasks.map(t => t.task_id === task.task_id ? { ...t, run_requested_at: nowIso, updated_at: nowIso } : t) }, nowIso);
     }
     case 'demo_refresh': {
       if (!ws.is_demo) throw new CommandError('데모 모드에서만 가능합니다.', 'forbidden');

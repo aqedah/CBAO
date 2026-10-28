@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Runner secrets
+serviceAccount.json
+runner/serviceAccount.json
+runs/

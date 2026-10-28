@@ -19,6 +19,13 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
   const artifacts = ws.artifacts.filter(a => a.task_id === task.task_id);
   const approvals = ws.approvals.filter(a => a.task_id === task.task_id);
 
+  const requestRun = async () => {
+    if (!window.confirm(`"${task.title}" 실행을 요청할까요? Runner(실행 PC)가 받아가면 PC에서 ${member?.tool_label || '실행 도구'}가 지정 폴더 안에서 작업합니다. 결과는 승인 전까지 완료가 아닙니다.`)) return;
+    try { await getStore().command({ type: 'request_run', task_id: task.task_id, expected_revision: task.revision, idempotency_key: newIdempotencyKey() }); setMsg('실행 요청을 기록했습니다. Runner 가 받아가면 실행 기록이 생깁니다.'); }
+    catch (e) { setMsg(e instanceof CommandError ? e.message : '요청 실패'); }
+  };
+  const activeRun = runs.find(r => ['queued', 'leased', 'starting', 'running', 'waiting_input', 'stopping'].includes(r.status));
+  const canRequestRun = member && (member.execution_mode === 'managed' || member.execution_mode === 'observed') && ['ready', 'needs_changes'].includes(task.status) && !activeRun;
   const requestCancel = async (runId: string) => {
     if (!window.confirm('이 실행에 중지 요청을 보낼까요? 요청만으로 종료가 확인되지는 않습니다. Runner 의 종료 확인이 올 때까지 "전달 대기"로 표시됩니다.')) return;
     try { await getStore().command({ type: 'request_cancel', run_id: runId, idempotency_key: newIdempotencyKey() }); setMsg('중지 요청을 기록했습니다. 전달·종료 확인을 기다립니다.'); }
@@ -33,6 +40,9 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
         <span className="spacer" />
         {member?.execution_mode === 'external' && <a className="btn" href={href(`/tasks/${task.task_id}/external-report`)}>결과·상태 직접 보고</a>}
         <a className="btn" href={href('/tasks/new', { project: task.project_id, assignee: task.assignee_member_id })}>이 담당에게 새 지시</a>
+        {canRequestRun && (task.run_requested_at
+          ? <span className="badge attention">실행 요청됨 · Runner 대기 ({formatTime(task.run_requested_at)})</span>
+          : <button className="btn primary" type="button" onClick={() => void requestRun()}>실행 요청</button>)}
       </div>
       {msg && <div className="notice" role="status">{msg}</div>}
       <div className="grid-2">

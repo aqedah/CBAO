@@ -49,6 +49,8 @@ export interface Task {
   updated_at: string;
   /** 서버 순서. 대표 작업 선택에 사용. 클라이언트 시각으로 정렬하지 않는다. */
   sequence: number;
+  /** 소유자가 '실행 요청'을 누른 시각. 이 값이 있어야 Runner 가 받아간다. 저장만으로는 실행되지 않는다. */
+  run_requested_at?: string | null;
 }
 
 export interface Run {
