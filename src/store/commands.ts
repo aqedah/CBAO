@@ -17,7 +17,7 @@ export type Command =
   | { type: 'register_member'; display_name: string; role_label: string; execution_mode: ExecutionMode; tool_label: string; idempotency_key: string }
   | { type: 'update_member'; member_id: string; patch: Partial<Pick<Member, 'display_name' | 'role_label' | 'execution_mode' | 'tool_label'>> }
   | { type: 'register_project'; name: string; purpose: string; repo_reference: string | null; idempotency_key: string }
-  | { type: 'update_project'; project_id: string; patch: Partial<Pick<Project, 'name' | 'purpose' | 'repo_reference' | 'archived'>> }
+  | { type: 'update_project'; project_id: string; patch: Partial<Pick<Project, 'name' | 'purpose' | 'repo_reference' | 'archived' | 'work_branch' | 'build_command' | 'deploy_dir' | 'deploy_branch'>> }
   | { type: 'update_ui'; patch: Partial<UiSettings> }
   | { type: 'mark_task_status'; task_id: string; status: Task['status']; expected_revision: number }
   | { type: 'request_run'; task_id: string; expected_revision: number; idempotency_key: string }
@@ -181,6 +181,12 @@ export function applyCommand(ws: Workspace, cmd: Command, nowIso: string): Works
     case 'update_project': {
       if (!ws.projects.some(p => p.project_id === cmd.project_id)) throw new CommandError('프로젝트가 없습니다.', 'not_found');
       if (cmd.patch.repo_reference && !/^([\w.-]+\/[\w.-]+|https:\/\/[^\s]+)$/.test(cmd.patch.repo_reference)) throw new CommandError('저장소 참조는 owner/repo 또는 https 주소여야 합니다.', 'invalid');
+      for (const k of ['work_branch', 'deploy_branch'] as const) {
+        const v = cmd.patch[k];
+        if (v && !/^[\w./-]{1,100}$/.test(v)) throw new CommandError('가지 이름이 올바르지 않습니다.', 'invalid');
+      }
+      if (cmd.patch.deploy_dir && !/^[\w./-]{1,100}$/.test(cmd.patch.deploy_dir)) throw new CommandError('배포 폴더 이름이 올바르지 않습니다.', 'invalid');
+      if (cmd.patch.build_command && /[;&|`$<>]/.test(cmd.patch.build_command)) throw new CommandError('빌드 명령에는 ; & | ` $ < > 를 쓸 수 없습니다.', 'invalid');
       return bump({ ...ws, projects: ws.projects.map(p => p.project_id === cmd.project_id ? { ...p, ...cmd.patch } : p) }, nowIso);
     }
     case 'update_ui':

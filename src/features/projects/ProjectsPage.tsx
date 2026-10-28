@@ -4,25 +4,36 @@ import { CommandError, newIdempotencyKey } from '../../store/commands';
 
 const CANDIDATES = ['MILAL', 'MILALWV', 'CBSR', 'CBWP'];
 
-function ProjectRow({ p }: { p: { project_id: string; name: string; purpose: string; repo_reference: string | null; archived: boolean } }) {
+function ProjectRow({ p }: { p: { project_id: string; name: string; purpose: string; repo_reference: string | null; archived: boolean; work_branch?: string | null; build_command?: string | null; deploy_dir?: string | null; deploy_branch?: string | null } }) {
   const [edit, setEdit] = useState(false);
   const [purpose, setPurpose] = useState(p.purpose);
   const [repo, setRepo] = useState(p.repo_reference ?? '');
+  const [workBranch, setWorkBranch] = useState(p.work_branch ?? '');
+  const [buildCmd, setBuildCmd] = useState(p.build_command ?? '');
+  const [deployDir, setDeployDir] = useState(p.deploy_dir ?? '');
+  const [deployBranch, setDeployBranch] = useState(p.deploy_branch ?? '');
   const [err, setErr] = useState<string | null>(null);
   const save = async () => {
     setErr(null);
-    try { await getStore().command({ type: 'update_project', project_id: p.project_id, patch: { purpose, repo_reference: repo.trim() || null } }); setEdit(false); }
+    try { await getStore().command({ type: 'update_project', project_id: p.project_id, patch: { purpose, repo_reference: repo.trim() || null, work_branch: workBranch.trim() || null, build_command: buildCmd.trim() || null, deploy_dir: deployDir.trim() || null, deploy_branch: deployBranch.trim() || null } }); setEdit(false); }
     catch (e) { setErr(e instanceof CommandError ? e.message : '저장 실패'); }
   };
   return (
     <li>
       <div className="row"><strong>{p.name}</strong> <span className="meta">{p.project_id}</span><span className="spacer" />
         <button type="button" className="btn small" onClick={() => setEdit(v => !v)}>{edit ? '취소' : '수정'}</button></div>
-      {!edit && <div className="meta">{p.purpose || '목적 없음'} · 저장소 {p.repo_reference ?? '없음 (심부름꾼은 빈 폴더에서 시작)'}</div>}
+      {!edit && <div className="meta">{p.purpose || '목적 없음'} · 저장소 {p.repo_reference ?? '없음 (심부름꾼은 빈 폴더에서 시작)'} · 작업 가지 {p.work_branch || 'main'}{p.build_command ? ` · 빌드 "${p.build_command}"` : ''}{p.deploy_dir ? ` · 배포 ${p.deploy_dir}/ → ${p.deploy_branch || 'main'}` : ''}</div>}
       {edit && (
         <div className="stack" style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
           <input value={purpose} onChange={e => setPurpose(e.target.value)} placeholder="목적" style={{ padding: 8, border: '1px solid var(--line)', borderRadius: 6 }} />
           <input value={repo} onChange={e => setRepo(e.target.value)} placeholder="저장소 참조 예: aqedah/CBSR" style={{ padding: 8, border: '1px solid var(--line)', borderRadius: 6 }} />
+          <div className="meta">아래 세 칸은 "원본 가지와 빌드 결과 가지가 다른" 저장소(CBSR 등)에만 적습니다. 보통은 비워 둡니다.</div>
+          <input value={workBranch} onChange={e => setWorkBranch(e.target.value)} placeholder="작업 가지 (원본이 있는 가지, 예: source · 비우면 main)" style={{ padding: 8, border: '1px solid var(--line)', borderRadius: 6 }} />
+          <input value={buildCmd} onChange={e => setBuildCmd(e.target.value)} placeholder="빌드 명령 (예: python app/build_site.py)" style={{ padding: 8, border: '1px solid var(--line)', borderRadius: 6 }} />
+          <div className="row">
+            <input value={deployDir} onChange={e => setDeployDir(e.target.value)} placeholder="배포 폴더 (예: site)" style={{ padding: 8, border: '1px solid var(--line)', borderRadius: 6, flex: 1 }} />
+            <input value={deployBranch} onChange={e => setDeployBranch(e.target.value)} placeholder="배포 가지 (비우면 main)" style={{ padding: 8, border: '1px solid var(--line)', borderRadius: 6, flex: 1 }} />
+          </div>
           {err && <div className="notice error">{err}</div>}
           <div className="row"><button type="button" className="btn primary small" onClick={() => void save()}>저장</button></div>
         </div>

@@ -92,7 +92,7 @@ export function ChatPage({ threadId }: { threadId: string | null }) {
         ) : (
           <div className="chat-head row">
             <strong>{thread.title}</strong>
-            <span className="meta">{thread.project_id}{project?.repo_reference ? ` · ${project.repo_reference}` : ''}</span>
+            <span className="meta">{thread.project_id}{project?.repo_reference ? ` · ${project.repo_reference}` : ''}{project?.work_branch ? ` · 작업 가지 ${project.work_branch}` : ''}</span>
             <span className="spacer" />
             {thread.status === 'running' && <Badge tone="active">{memberName(thread.pending?.member_id ?? thread.member_id)} 실행 중</Badge>}
             {thread.status === 'queued' && <><Badge tone="attention">Runner 대기</Badge><button type="button" className="btn small" onClick={() => void act(() => cancelPending(thread.thread_id), '취소했습니다.')}>취소</button></>}
@@ -140,11 +140,17 @@ export function ChatPage({ threadId }: { threadId: string | null }) {
             {thread && thread.status === 'idle' && others.map(m => (
               <button key={m.member_id} type="button" className="btn" disabled={busy} onClick={() => void act(() => requestReview(thread.thread_id, m.member_id), `${m.display_name}에게 검토를 요청했습니다.`)}>{m.display_name}에게 검토 요청</button>
             ))}
-            {thread && thread.status === 'idle' && project?.repo_reference && (
-              <button type="button" className="btn danger" disabled={busy} onClick={() => { if (window.confirm(`지금까지의 변경을 GitHub ${project.repo_reference} 의 main 에 바로 반영할까요? 사이트에 그대로 적용됩니다.`)) void act(() => requestPublish(thread.thread_id, thread.member_id), '반영을 요청했습니다. Runner 가 결과를 보고합니다.'); }}>반영 (GitHub main)</button>
-            )}
+            {thread && thread.status === 'idle' && project?.repo_reference && (() => {
+              const work = project.work_branch || 'main';
+              const deploy = project.deploy_dir ? (project.deploy_branch || 'main') : null;
+              const label = deploy && deploy !== work ? `${work} → 빌드 → ${deploy}` : work;
+              const explain = deploy && deploy !== work
+                ? `지금까지의 변경을 GitHub ${project.repo_reference} 의 ${work} 가지에 올리고, 바로 빌드(${project.build_command || '빌드 명령 없음'})해서 결과를 ${deploy} 가지에 반영할까요? 사이트에 그대로 적용됩니다.`
+                : `지금까지의 변경을 GitHub ${project.repo_reference} 의 ${work} 에 바로 반영할까요? 사이트에 그대로 적용됩니다.`;
+              return <button type="button" className="btn danger" disabled={busy} onClick={() => { if (window.confirm(explain)) void act(() => requestPublish(thread.thread_id, thread.member_id), '반영을 요청했습니다. Runner 가 결과를 보고합니다.'); }}>반영 (GitHub {label})</button>;
+            })()}
           </div>
-          <p className="meta">파일 수정은 자동 허용, 위험한 명령·외부 전송·push 는 Runner 가 막습니다. AI 끼리는 검토 1회 + 수정 1회까지만 자동으로 오갑니다.</p>
+          <p className="meta">파일 수정·검사·빌드·git 읽기 명령은 자동 허용, 커밋·push·가지 바꾸기·외부 전송은 AI 가 못 하고 Runner 가 '반영' 때만 합니다. AI 끼리는 검토 1회 + 수정 1회까지만 자동으로 오갑니다.</p>
         </form>
       </section>
     </div>

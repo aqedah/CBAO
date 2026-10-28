@@ -22,6 +22,14 @@ export interface Project {
   purpose: string;
   repo_reference: string | null;
   archived: boolean;
+  /** Runner 가 내려받고 고치는 가지. 비우면 main */
+  work_branch?: string | null;
+  /** 반영 때 작업 가지에서 실행할 빌드 명령 (예: python app/build_site.py). 비우면 없음 */
+  build_command?: string | null;
+  /** 빌드 결과 폴더(예: site). 있으면 그 내용을 deploy_branch 에 올린다 */
+  deploy_dir?: string | null;
+  /** 결과물을 올릴 가지. 비우면 main */
+  deploy_branch?: string | null;
 }
 
 export interface Member {
