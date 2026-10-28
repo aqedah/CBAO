@@ -39,7 +39,7 @@ KEY_PATH = BASE / "serviceAccount.json"
 RUNS_DIR = BASE / "runs"
 PROJECTS_DIR = BASE / "projects"
 ACTIVE_RUN = {"queued", "leased", "starting", "running", "waiting_input", "stopping"}
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 
 def now_iso() -> str:
@@ -58,11 +58,18 @@ DEFAULT_CONFIG = {
     "max_concurrent_managed_runs": 1,
     "run_timeout_minutes": 30,
     "projects": {},
+    "external_members": [
+        {"member_id": "m-gpt", "display_name": "GPT", "role_label": "연구·설계·검수", "tool_label": "ChatGPT 웹", "seat": "gpt"},
+        {"member_id": "m-gemini", "display_name": "Gemini", "role_label": "자료·이미지", "tool_label": "Gemini 웹", "seat": "gemini"},
+        {"member_id": "m-notebooklm", "display_name": "NotebookLM", "role_label": "출처·문서 정리", "tool_label": "NotebookLM 웹", "seat": "notebooklm"},
+    ],
     "tools": {
         "claude": {"command": "claude", "member_id": "m-claude", "display_name": "Claude", "role_label": "구현·개발", "seat": "claude",
                    "tool_label": "Claude Code CLI (stream-json)"},
         "codex": {"command": "codex", "member_id": "m-codex", "display_name": "Codex", "role_label": "코드·검사", "seat": "codex",
                   "tool_label": "Codex CLI (exec --json)"},
+        "gemini": {"command": "gemini", "member_id": "m-gemini", "display_name": "Gemini", "role_label": "자료·이미지", "seat": "gemini",
+                   "tool_label": "Gemini CLI (headless)"},
     },
 }
 
@@ -83,11 +90,43 @@ def load_config() -> dict:
 
 
 # ---------------------------------------------------------------- 도구 탐지
+def candidate_dirs() -> list:
+    """PATH 밖에 설치되는 흔한 위치들 (npm 전역, Claude 네이티브 설치, 사용자 로컬 bin)."""
+    home = Path.home()
+    env = os.environ
+    dirs = []
+    for d in (env.get("APPDATA"), env.get("LOCALAPPDATA"), env.get("ProgramFiles"), env.get("ProgramFiles(x86)")):
+        if d:
+            dirs += [Path(d) / "npm", Path(d) / "Programs" / "claude", Path(d) / "Programs" / "codex", Path(d) / "nodejs"]
+    dirs += [home / ".local" / "bin", home / ".claude" / "bin", home / ".claude" / "local", home / ".codex" / "bin",
+             home / "AppData" / "Roaming" / "npm", home / "scoop" / "shims", Path("C:/Program Files/nodejs")]
+    npm = shutil.which("npm") or shutil.which("npm.cmd")
+    if npm:
+        for args in (["prefix", "-g"],):
+            try:
+                r = subprocess.run([npm, *args], capture_output=True, timeout=15)
+                out = r.stdout.decode("utf-8", errors="replace").strip()
+                if r.returncode == 0 and out:
+                    dirs.append(Path(out))
+            except Exception:  # noqa: BLE001
+                pass
+    return [d for d in dirs if d]
+
+
 def which(cmd: str):
-    for name in (cmd, cmd + ".cmd", cmd + ".exe"):
+    # 절대 경로가 config 에 지정된 경우
+    if os.path.isabs(cmd) and Path(cmd).exists():
+        return cmd
+    names = (cmd, cmd + ".cmd", cmd + ".exe", cmd + ".bat", cmd + ".ps1")
+    for name in names:
         p = shutil.which(name)
-        if p:
+        if p and not p.lower().endswith(".ps1"):
             return p
+    for d in candidate_dirs():
+        for name in names:
+            p = d / name
+            if p.exists() and not name.endswith(".ps1"):
+                return str(p)
     return None
 
 
@@ -98,6 +137,7 @@ def detect_tools(cfg: dict) -> dict:
         path = which(t["command"])
         if not path:
             out[key] = {"path": None, "status": "not_installed", "version": None}
+            log(f"  '{t['command']}' 를 PATH 와 흔한 설치 위치에서 찾지 못했습니다. 설치돼 있다면 config.json 의 tools.{key}.command 에 전체 경로를 적어 주세요.")
             continue
         version = None
         try:
@@ -219,6 +259,12 @@ class RunProcess:
                     self.phase = "testing" if any(k in cmd for k in ("test", "pytest", "vitest", "lint", "tsc")) else "implementing"
         elif ev.get("type") == "result":
             self.result_text = str(ev.get("result") or "")[:4000]
+        # Gemini CLI stream-json
+        elif ev.get("type") == "tool_use":
+            cmd = str((ev.get("input") or ev.get("args") or {}).get("command", ""))
+            self.phase = "testing" if any(k in cmd for k in ("test", "pytest", "vitest", "lint", "tsc")) else "implementing"
+        elif ev.get("type") == "message" and ev.get("role") == "assistant" and ev.get("content"):
+            self.result_text = str(ev.get("content"))[:4000]
         # Codex exec --json
         elif ev.get("type") in ("item.completed", "item.started"):
             item = ev.get("item") or {}
@@ -262,12 +308,30 @@ def build_prompt(task: dict, project_dir: Path) -> str:
     )
 
 
+_HELP_CACHE: dict = {}
+
+
+def _gemini_supports(tool_path: str, token: str) -> bool:
+    if tool_path not in _HELP_CACHE:
+        try:
+            r = subprocess.run([tool_path, "--help"], capture_output=True, timeout=30)
+            _HELP_CACHE[tool_path] = (r.stdout + r.stderr).decode("utf-8", errors="replace")
+        except Exception:  # noqa: BLE001
+            _HELP_CACHE[tool_path] = ""
+    return token in _HELP_CACHE[tool_path]
+
+
 def build_command(tool_key: str, tool_path: str) -> list:
     if tool_key == "claude":
         allowed = "Read,Edit,Write,MultiEdit,Grep,Glob,LS,Bash(npm test*),Bash(npm run*),Bash(npx vitest*),Bash(npx tsc*),Bash(python -m pytest*),Bash(git status*),Bash(git diff*),Bash(git log*)"
         return [tool_path, "-p", "--output-format", "stream-json", "--verbose", "--permission-mode", "acceptEdits", "--allowedTools", allowed]
     if tool_key == "codex":
         return [tool_path, "exec", "--json", "--sandbox", "workspace-write", "-"]
+    if tool_key == "gemini":
+        # 프롬프트는 stdin 으로 전달. 파일 수정은 자동 승인, 셸 명령은 비대화형이라 거부됨.
+        fmt = "stream-json" if _gemini_supports(tool_path, "stream-json") else "json"
+        mode = ["--approval-mode", "auto_edit"] if _gemini_supports(tool_path, "--approval-mode") else []
+        return [tool_path, "--output-format", fmt, *mode]
     raise ValueError(tool_key)
 
 
@@ -306,6 +370,14 @@ class Runner:
             members = ws.setdefault("members", [])
             ui = ws.setdefault("ui", {})
             bindings = ui.setdefault("seat_bindings", {})
+            # 소유자가 지정한 외부 작업 팀원(직접 보고). 없을 때만 만들고, 기존 팀원은 건드리지 않는다.
+            for ext in cfg.get("external_members", []):
+                if not any(x.get("member_id") == ext["member_id"] for x in members):
+                    members.append({"member_id": ext["member_id"], "display_name": ext["display_name"], "role_label": ext["role_label"],
+                                    "execution_mode": "external", "tool_label": ext["tool_label"], "connection_state": "unknown",
+                                    "last_heartbeat_at": None, "capabilities": {"request_cancel": False}})
+                if ext.get("seat") and not bindings.get(ext["seat"]):
+                    bindings[ext["seat"]] = ext["member_id"]
             for key, t in tools.items():
                 spec = cfg["tools"][key]
                 m = next((x for x in members if x.get("member_id") == spec["member_id"]), None)
@@ -315,6 +387,8 @@ class Runner:
                         continue
                     m = {"member_id": spec["member_id"], "display_name": spec["display_name"], "role_label": spec["role_label"]}
                     members.append(m)
+                if not installed and m.get("execution_mode") == "external":
+                    continue  # 도구가 없으면 외부 작업(직접 보고) 팀원 그대로 둔다
                 m.update({"execution_mode": "managed" if installed else "unconfigured", "tool_label": spec["tool_label"],
                           "connection_state": "healthy" if installed else "unknown", "last_heartbeat_at": now if installed else None,
                           "capabilities": {"request_cancel": True}})

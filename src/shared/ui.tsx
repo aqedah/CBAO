@@ -64,7 +64,7 @@ export function SourceLine() {
       <span>데이터: <strong>{info.label}</strong> · {label}</span>
       {ws && <span>revision {ws.revision} · 기준 시각 {formatTime(ws.captured_at)} ({formatAge(ws.captured_at, now)})</span>}
       {lastSync && <span>마지막 동기화 {formatTime(lastSync)}</span>}
-      {source !== 'demo' && !info.provides_live_runs && <span className="badge attention">Runner 없음 · 수동 보고만 가능</span>}
+      {source !== 'demo' && !info.provides_live_runs && !(ws?.devices.some(d => d.connection_state === 'healthy')) && <span className="badge attention">Runner 없음 · 수동 보고만 가능</span>}
       {error && <span className="badge error">{error}</span>}
     </div>
   );

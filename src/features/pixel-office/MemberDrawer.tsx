@@ -29,6 +29,19 @@ export function MemberDrawer({ model, nowMs, onClose, projectFilter, privacy }: 
   const artifacts = ws && member ? ws.artifacts.filter(a => a.member_id === member.member_id).slice(-3).reverse() : [];
   const run = ws && view?.runId ? ws.runs.find(r => r.run_id === view.runId) ?? null : null;
 
+  /** 외부 작업: 지시 묶음을 복사해 해당 웹 서비스에 붙여 넣는다. 자동 전송은 없다. */
+  const fullTask = ws && member?.task ? ws.tasks.find(t => t.task_id === member.task!.task_id) ?? null : null;
+  const serviceUrl = externalServiceUrl(fullMember?.tool_label ?? '', member?.display_name ?? '');
+  const copyBundle = async () => {
+    if (!fullTask) return;
+    const text = [
+      `[바이브코딩인력사무소 지시 묶음]`, `프로젝트: ${fullTask.project_id}`, `작업 ID: ${fullTask.task_id} (rev ${fullTask.revision})`,
+      `제목: ${fullTask.title}`, `목적: ${fullTask.goal || '(없음)'}`, `완료 조건: ${fullTask.done_criteria || '(없음)'}`,
+      ``, `끝나면 결과 링크와 요약을 사무실의 "결과 등록"에 직접 적어 주세요.`,
+    ].join('\n');
+    try { await navigator.clipboard.writeText(text); setMsg('지시 묶음을 복사했습니다. 서비스를 열어 붙여 넣으세요.'); }
+    catch { setMsg('복사하지 못했습니다. 작업 열기에서 내용을 직접 복사하세요.'); }
+  };
   const requestCancel = async () => {
     if (!view?.runId) return;
     if (!window.confirm('중지 요청을 보낼까요? 요청만으로 종료가 확인되지는 않으며, Runner 의 종료 확인이 올 때까지 "전달 대기"로 표시됩니다.')) return;
@@ -98,6 +111,8 @@ export function MemberDrawer({ model, nowMs, onClose, projectFilter, privacy }: 
             {member.task && <a className="btn primary" href={href(`/tasks/${member.task.task_id}`)}>작업 열기</a>}
             <a className="btn" href={href('/tasks/new', { project: projectFilter ?? member.task?.project_id ?? null, assignee: member.member_id })}>이 담당에게 새 지시</a>
             <a className="btn" href={href('/records')}>자료 보기</a>
+            {member.execution_mode === 'external' && member.task && <button type="button" className="btn" onClick={() => void copyBundle()}>지시 묶음 복사</button>}
+            {member.execution_mode === 'external' && serviceUrl && <a className="btn" href={serviceUrl} target="_blank" rel="noopener noreferrer">서비스 열기</a>}
             {member.execution_mode === 'external' && member.task && <a className="btn" href={href(`/tasks/${member.task.task_id}/external-report`)}>결과 등록</a>}
             {view.canRequestCancel && <button type="button" className="btn danger" onClick={() => void requestCancel()}>중지 요청</button>}
           </div>
@@ -106,6 +121,16 @@ export function MemberDrawer({ model, nowMs, onClose, projectFilter, privacy }: 
       )}
     </aside>
   );
+}
+
+/** 외부 서비스 주소는 고정 목록(https)만 허용한다. */
+function externalServiceUrl(toolLabel: string, name: string): string | null {
+  const k = `${toolLabel} ${name}`.toLowerCase();
+  if (k.includes('notebooklm')) return 'https://notebooklm.google.com/';
+  if (k.includes('gemini')) return 'https://gemini.google.com/';
+  if (k.includes('chatgpt') || k.includes('gpt')) return 'https://chatgpt.com/';
+  if (k.includes('claude')) return 'https://claude.ai/';
+  return null;
 }
 
 function nextAction(state: string, mode: string): string {
