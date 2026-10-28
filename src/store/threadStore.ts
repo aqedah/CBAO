@@ -2,7 +2,7 @@
  * 대화방 스토어 (Firebase 전용). 로컬/데모 모드에서는 비활성.
  * 쓰기는 소유자만(규칙), 실행·중계는 Runner 가 한다. 여기서는 큐에 넣기만 한다.
  */
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import type { Thread, ChatMessage, PendingTurn } from '../domain/chat';
 import { MAX_MESSAGES, newId } from '../domain/chat';
 import { firebaseConfigured, getAuthState } from './providers/firebaseProvider';
@@ -33,8 +33,10 @@ const clean = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 let threads: Thread[] = [];
 let loaded = false;
 let error: string | null = null;
+/** useSyncExternalStore 는 같은 객체를 돌려줘야 한다 (매번 새 객체면 무한 렌더링). */
+let snapshot: { threads: Thread[]; loaded: boolean; error: string | null } = { threads, loaded, error };
 const listeners = new Set<() => void>();
-const emit = () => listeners.forEach(l => l());
+const emit = () => { snapshot = { threads, loaded, error }; listeners.forEach(l => l()); };
 let unsub: (() => void) | null = null;
 
 export function startThreadSubscription() {
@@ -50,9 +52,8 @@ export function startThreadSubscription() {
 export function stopThreadSubscription() { unsub?.(); unsub = null; threads = []; loaded = false; emit(); }
 
 export function useThreads(): { threads: Thread[]; loaded: boolean; error: string | null } {
-  const [, force] = useState(0);
-  useEffect(() => { startThreadSubscription(); const l = () => force(x => x + 1); listeners.add(l); return () => { listeners.delete(l); }; }, []);
-  return useSyncExternalStore(l => { listeners.add(l); return () => { listeners.delete(l); }; }, () => ({ threads, loaded, error }), () => ({ threads, loaded, error }));
+  useEffect(() => { startThreadSubscription(); }, []);
+  return useSyncExternalStore(l => { listeners.add(l); return () => { listeners.delete(l); }; }, () => snapshot, () => snapshot);
 }
 
 async function threadRef(threadId: string) {

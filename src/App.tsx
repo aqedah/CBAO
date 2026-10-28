@@ -3,6 +3,7 @@ import { useRoute, match, href, ROUTE_ALIASES, navigate } from './app/router';
 import { getStore, useStoreState } from './store/workspaceStore';
 import { DemoBanner } from './shared/ui';
 import { AuthGate } from './shared/AuthGate';
+import { ErrorBoundary } from './shared/ErrorBoundary';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { TasksPage } from './features/tasks/TasksPage';
 import { TaskDetailPage } from './features/tasks/TaskDetailPage';
@@ -85,7 +86,7 @@ export default function App() {
         <DemoBanner />
         <AuthGate />
         {status === 'loading' && !ws && <p className="empty" role="status">데이터 불러오는 중…</p>}
-        {page}
+        <ErrorBoundary resetKey={route.hash}>{page}</ErrorBoundary>
       </main>
     </div>
   );
