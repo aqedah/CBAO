@@ -17,7 +17,7 @@ const outDir = path.join(root, 'docs/test-results');
 const shotDir = path.join(outDir, 'screenshots');
 fs.mkdirSync(shotDir, { recursive: true });
 const PORT = 4179;
-const BASE = `http://localhost:${PORT}`;
+const BASE = `http://localhost:${PORT}/CBAO`;
 const GL_ARGS = ['--enable-unsafe-swiftshader', '--use-gl=angle', '--use-angle=swiftshader'];
 
 const results = [];

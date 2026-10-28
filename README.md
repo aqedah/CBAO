@@ -1,5 +1,7 @@
 # AI Office (CBAO — Central Bible AI Office)
 
+배포 주소: https://aqedah.github.io/CBAO/ (GitHub Pages, `main` 기준)
+
 사용자 1인이 총괄하는 통합형 AI 사무실의 프론트엔드. 메인 대시보드(`#/office`)와, 같은 업무 데이터를 따뜻한 2.5D 픽셀 장면으로 보여주는 픽셀 사무실(`#/office/room`)을 제공한다.
 
 - 명세: `docs/handoff/` (v1 원본 명세 + 픽셀 사무실 1.1 추가 명세)
@@ -12,7 +14,7 @@
 ```sh
 npm install
 npm run dev          # 개발 서버
-npm run build        # 정적 빌드 (dist/) — GitHub Pages 배포 가능 (해시 라우팅)
+npm run build        # 정적 빌드 (dist/, base=/CBAO/) — main 푸시 시 GitHub Actions 가 Pages 로 배포
 npm run preview
 npm test             # 단위 시험 (vitest)
 npm run e2e          # 브라우저 인수 시험 (빌드 후; Playwright + Chromium 필요)
