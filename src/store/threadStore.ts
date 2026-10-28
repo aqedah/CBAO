@@ -5,7 +5,7 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import type { Thread, ChatMessage, PendingTurn } from '../domain/chat';
 import { MAX_MESSAGES, newId } from '../domain/chat';
-import { firebaseConfigured, getAuthState } from './providers/firebaseProvider';
+import { firebaseConfigured, getAuthState, onAuthState } from './providers/firebaseProvider';
 import { getStore } from './workspaceStore';
 import { CommandError } from './commands';
 
@@ -39,9 +39,15 @@ const listeners = new Set<() => void>();
 const emit = () => { snapshot = { threads, loaded, error }; listeners.forEach(l => l()); };
 let unsub: (() => void) | null = null;
 
+let authWatcher: (() => void) | null = null;
 export function startThreadSubscription() {
   if (unsub || !firebaseConfigured) return;
-  const u = getAuthState().uid; if (!u) return;
+  const u = getAuthState().uid;
+  if (!u) {
+    // 로그인 확인이 끝나면 다시 시도한다 (로그아웃 상태면 비어 있음으로 표시)
+    if (!authWatcher) authWatcher = onAuthState(st => { if (st.uid) { authWatcher?.(); authWatcher = null; startThreadSubscription(); } else { threads = []; loaded = true; error = null; emit(); } });
+    return;
+  }
   void fs().then(({ fs: f, db }) => {
     const col = f.collection(db, 'workspaces', u, 'threads');
     unsub = f.onSnapshot(f.query(col, f.orderBy('updated_at', 'desc'), f.limit(100)), snap => {

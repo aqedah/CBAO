@@ -17,7 +17,7 @@ export function ChatPage({ threadId }: { threadId: string | null }) {
   const source = useStoreState(s => s.source);
   const { threads, loaded, error } = useThreads();
   const route = useRoute();
-  const [projectId, setProjectId] = useState(route.query.get('project') ?? '');
+  const [projectId, setProjectId] = useState(() => { try { return route.query.get('project') ?? localStorage.getItem('ai-office.chat-project') ?? ''; } catch { return route.query.get('project') ?? ''; } });
   const [memberId, setMemberId] = useState(route.query.get('member') ?? '');
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -33,6 +33,10 @@ export function ChatPage({ threadId }: { threadId: string | null }) {
     if (thread) { setProjectId(thread.project_id); setMemberId(thread.member_id); }
     else if (!memberId && managedMembers[0]) setMemberId(managedMembers[0].member_id);
   }, [thread, managedMembers, memberId]);
+  useEffect(() => {
+    if (!thread && !projectId && ws && ws.projects.filter(p => !p.archived).length === 1) setProjectId(ws.projects.filter(p => !p.archived)[0].project_id);
+  }, [thread, projectId, ws]);
+  useEffect(() => { if (projectId) { try { localStorage.setItem('ai-office.chat-project', projectId); } catch { /* ignore */ } } }, [projectId]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ block: 'end' }); }, [thread?.messages.length, thread?.status]);
 
   if (source !== 'firebase') return <div className="notice">채팅 모드는 Firebase 공용 장부에서만 됩니다. 설정 → 연결에서 Firebase 를 고르고 로그인하세요.</div>;
@@ -108,8 +112,8 @@ export function ChatPage({ threadId }: { threadId: string | null }) {
         )}
         <form className="chat-input" onSubmit={send}>
           <div className="row">
-            <select value={projectId} onChange={e => setProjectId(e.target.value)} disabled={!!thread} aria-label="프로젝트">
-              <option value="">프로젝트</option>
+            <select value={projectId} onChange={e => setProjectId(e.target.value)} disabled={!!thread} aria-label="프로젝트" style={!projectId ? { borderColor: 'var(--attention)', background: '#fbf1e0' } : undefined}>
+              <option value="">▶ 프로젝트를 고르세요</option>
               {ws.projects.filter(p => !p.archived).map(p => <option key={p.project_id} value={p.project_id}>{p.name}</option>)}
             </select>
             <select value={memberId} onChange={e => setMemberId(e.target.value)} aria-label="담당 팀원">
@@ -130,6 +134,8 @@ export function ChatPage({ threadId }: { threadId: string | null }) {
             onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void send(e as unknown as FormEvent); } }} />
           <div className="row">
             <button className="btn primary" type="submit" disabled={busy || !text.trim() || !memberId || !projectId || (thread?.status ?? 'idle') !== 'idle'}>보내기 (Ctrl+Enter)</button>
+            {!projectId && <span className="dim-note">먼저 프로젝트를 고르세요</span>}
+            {projectId && !memberId && <span className="dim-note">PC에 연결된 팀원이 없습니다 (심부름꾼 확인)</span>}
             {thread && thread.status === 'idle' && others.map(m => (
               <button key={m.member_id} type="button" className="btn" disabled={busy} onClick={() => void act(() => requestReview(thread.thread_id, m.member_id), `${m.display_name}에게 검토를 요청했습니다.`)}>{m.display_name}에게 검토 요청</button>
             ))}
