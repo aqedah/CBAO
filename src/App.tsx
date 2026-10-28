@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { useRoute, match, href, ROUTE_ALIASES, navigate } from './app/router';
 import { getStore, useStoreState } from './store/workspaceStore';
 import { DemoBanner } from './shared/ui';
@@ -13,6 +13,9 @@ import { ConnectionsPage } from './features/settings/ConnectionsPage';
 import { TeamPage } from './features/settings/TeamPage';
 import { PoliciesPage } from './features/settings/PoliciesPage';
 import { ExternalReportPage } from './features/tasks/ExternalReportPage';
+
+// 픽셀 사무실은 라우트를 열 때만 렌더러·에셋을 불러온다.
+const PixelOfficePage = lazy(() => import('./features/pixel-office/PixelOfficePage').then(m => ({ default: m.PixelOfficePage })));
 
 function NavLink({ to, children, current, badge }: { to: string; children: ReactNode; current: boolean; badge?: number }) {
   return (
@@ -45,6 +48,7 @@ export default function App() {
   let page: ReactNode;
   let params: Record<string, string> | null;
   if (path === '/office') page = <DashboardPage />;
+  else if (path === '/office/room') page = <Suspense fallback={<p className="empty">픽셀 사무실 불러오는 중…</p>}><PixelOfficePage /></Suspense>;
   else if (path === '/projects') page = <ProjectsPage />;
   else if (path === '/tasks') page = <TasksPage />;
   else if (path === '/tasks/new') page = <NewTaskPage />;

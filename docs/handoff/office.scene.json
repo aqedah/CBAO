@@ -1,0 +1,641 @@
+{
+  "schema_version": "1.1.0",
+  "scene_id": "cozy-office-v1",
+  "title": "따뜻한 픽셀 사무실",
+  "purpose": "presentation_only",
+  "default_route": "#/office",
+  "room_route": "#/office/room",
+  "renderer": {
+    "kind": "isometric_2_5d",
+    "recommended_library": "pixi.js",
+    "major": 8,
+    "camera_rotation": false,
+    "logical_size": [
+      960,
+      600
+    ],
+    "texture_filter": "nearest",
+    "antialias": false,
+    "pixel_snap": true
+  },
+  "world": {
+    "columns": 24,
+    "rows": 18,
+    "tile_width": 32,
+    "tile_height": 16,
+    "elevation_px": 16,
+    "origin": [
+      430,
+      134
+    ]
+  },
+  "camera": {
+    "zoom_steps": [
+      0.75,
+      1,
+      1.5,
+      2
+    ],
+    "initial_zoom": 1,
+    "allow_pan": true,
+    "fit_on_first_open": true,
+    "snap_translation_to_pixel": true,
+    "mobile_mode": "fit_plus_dom_list"
+  },
+  "theme": {
+    "id": "warm-wood",
+    "palette": {
+      "wall": "#F1DFC3",
+      "floor_light": "#D7AB78",
+      "floor_shadow": "#A9744F",
+      "wood_dark": "#70513E",
+      "plant": "#617952",
+      "lamp": "#EAC076",
+      "ui_surface": "#FFF9F0",
+      "text": "#332B25",
+      "active": "#357565",
+      "attention": "#9A641C",
+      "error": "#A94545",
+      "muted": "#6B6A66"
+    },
+    "light_direction": "upper_left",
+    "ui_text_in_art": false,
+    "sound_default": "off"
+  },
+  "layers": [
+    {
+      "id": "architecture",
+      "order": 0,
+      "sort": "fixed"
+    },
+    {
+      "id": "floor_decor",
+      "order": 10,
+      "sort": "ground_y"
+    },
+    {
+      "id": "world",
+      "order": 20,
+      "sort": "ground_y_then_bias_then_id"
+    },
+    {
+      "id": "lighting",
+      "order": 30,
+      "sort": "fixed"
+    },
+    {
+      "id": "selection",
+      "order": 40,
+      "sort": "fixed"
+    },
+    {
+      "id": "dom_ui",
+      "order": 50,
+      "sort": "dom"
+    }
+  ],
+  "zones": [
+    {
+      "id": "work-zone",
+      "label": "팀원 작업석",
+      "bounds": [
+        1,
+        1,
+        22,
+        10
+      ]
+    },
+    {
+      "id": "handoff-zone",
+      "label": "검토·인계 테이블",
+      "bounds": [
+        9,
+        9,
+        7,
+        5
+      ]
+    },
+    {
+      "id": "owner-zone",
+      "label": "총괄·승인석",
+      "bounds": [
+        17,
+        10,
+        6,
+        6
+      ]
+    },
+    {
+      "id": "lounge-zone",
+      "label": "휴식 공간",
+      "bounds": [
+        1,
+        12,
+        7,
+        5
+      ]
+    }
+  ],
+  "seats": [
+    {
+      "id": "seat-gpt",
+      "member_binding": {
+        "seed_key": "gpt",
+        "member_id": null,
+        "auto_create_member": false
+      },
+      "label": "GPT",
+      "suggested_role": "연구·설계·검수",
+      "suggested_mode": "external",
+      "zone_id": "work-zone",
+      "position": {
+        "x": 3,
+        "y": 3,
+        "z": 0
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "asset_id": "desk-standard",
+      "avatar_asset_id": "avatar-gpt",
+      "orientation": "south_east",
+      "label_offset": [
+        0,
+        -96
+      ],
+      "hit_polygon": [
+        [
+          -52,
+          -62
+        ],
+        [
+          12,
+          -82
+        ],
+        [
+          58,
+          -52
+        ],
+        [
+          24,
+          16
+        ],
+        [
+          -42,
+          -2
+        ]
+      ],
+      "accent": "sage",
+      "desk_prop": "books",
+      "binding_required_for_live_status": true
+    },
+    {
+      "id": "seat-claude",
+      "member_binding": {
+        "seed_key": "claude",
+        "member_id": null,
+        "auto_create_member": false
+      },
+      "label": "Claude",
+      "suggested_role": "구현·개발",
+      "suggested_mode": "managed",
+      "zone_id": "work-zone",
+      "position": {
+        "x": 8,
+        "y": 3,
+        "z": 0
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "asset_id": "desk-standard",
+      "avatar_asset_id": "avatar-claude",
+      "orientation": "south_east",
+      "label_offset": [
+        0,
+        -96
+      ],
+      "hit_polygon": [
+        [
+          -52,
+          -62
+        ],
+        [
+          12,
+          -82
+        ],
+        [
+          58,
+          -52
+        ],
+        [
+          24,
+          16
+        ],
+        [
+          -42,
+          -2
+        ]
+      ],
+      "accent": "terracotta",
+      "desk_prop": "code",
+      "binding_required_for_live_status": true
+    },
+    {
+      "id": "seat-gemini",
+      "member_binding": {
+        "seed_key": "gemini",
+        "member_id": null,
+        "auto_create_member": false
+      },
+      "label": "Gemini",
+      "suggested_role": "자료·이미지",
+      "suggested_mode": "external",
+      "zone_id": "work-zone",
+      "position": {
+        "x": 13,
+        "y": 3,
+        "z": 0
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "asset_id": "desk-standard",
+      "avatar_asset_id": "avatar-gemini",
+      "orientation": "south_east",
+      "label_offset": [
+        0,
+        -96
+      ],
+      "hit_polygon": [
+        [
+          -52,
+          -62
+        ],
+        [
+          12,
+          -82
+        ],
+        [
+          58,
+          -52
+        ],
+        [
+          24,
+          16
+        ],
+        [
+          -42,
+          -2
+        ]
+      ],
+      "accent": "blue",
+      "desk_prop": "images",
+      "binding_required_for_live_status": true
+    },
+    {
+      "id": "seat-notebooklm",
+      "member_binding": {
+        "seed_key": "notebooklm",
+        "member_id": null,
+        "auto_create_member": false
+      },
+      "label": "NotebookLM",
+      "suggested_role": "출처·문서 정리",
+      "suggested_mode": "external",
+      "zone_id": "work-zone",
+      "position": {
+        "x": 18,
+        "y": 3,
+        "z": 0
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "asset_id": "desk-standard",
+      "avatar_asset_id": "avatar-notebooklm",
+      "orientation": "south_east",
+      "label_offset": [
+        0,
+        -96
+      ],
+      "hit_polygon": [
+        [
+          -52,
+          -62
+        ],
+        [
+          12,
+          -82
+        ],
+        [
+          58,
+          -52
+        ],
+        [
+          24,
+          16
+        ],
+        [
+          -42,
+          -2
+        ]
+      ],
+      "accent": "cream",
+      "desk_prop": "sources",
+      "binding_required_for_live_status": true
+    },
+    {
+      "id": "seat-codex",
+      "member_binding": {
+        "seed_key": "codex",
+        "member_id": null,
+        "auto_create_member": false
+      },
+      "label": "Codex",
+      "suggested_role": "코드·검사",
+      "suggested_mode": "managed",
+      "zone_id": "work-zone",
+      "position": {
+        "x": 3,
+        "y": 9,
+        "z": 0
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "asset_id": "desk-standard",
+      "avatar_asset_id": "avatar-codex",
+      "orientation": "south_east",
+      "label_offset": [
+        0,
+        -96
+      ],
+      "hit_polygon": [
+        [
+          -52,
+          -62
+        ],
+        [
+          12,
+          -82
+        ],
+        [
+          58,
+          -52
+        ],
+        [
+          24,
+          16
+        ],
+        [
+          -42,
+          -2
+        ]
+      ],
+      "accent": "slate",
+      "desk_prop": "tests",
+      "binding_required_for_live_status": true
+    }
+  ],
+  "objects": [
+    {
+      "id": "rear-shelf",
+      "asset_id": "bookshelf",
+      "position": {
+        "x": 1,
+        "y": 1,
+        "z": 0
+      },
+      "zone_id": "work-zone",
+      "footprint": [
+        2,
+        1
+      ],
+      "layer": "world",
+      "sort_bias": 0,
+      "action": "open_records",
+      "label": "자료 서가"
+    },
+    {
+      "id": "task-board",
+      "asset_id": "task-board",
+      "position": {
+        "x": 22,
+        "y": 1,
+        "z": 0
+      },
+      "zone_id": "work-zone",
+      "footprint": [
+        1,
+        1
+      ],
+      "layer": "world",
+      "sort_bias": 0,
+      "action": "open_tasks",
+      "label": "작업 게시판"
+    },
+    {
+      "id": "handoff-table",
+      "asset_id": "meeting-table",
+      "position": {
+        "x": 11,
+        "y": 11,
+        "z": 0
+      },
+      "zone_id": "handoff-zone",
+      "footprint": [
+        5,
+        2
+      ],
+      "layer": "world",
+      "sort_bias": 0,
+      "action": "open_handoffs",
+      "label": "검토·인계 테이블"
+    },
+    {
+      "id": "owner-desk",
+      "asset_id": "owner-desk",
+      "position": {
+        "x": 19,
+        "y": 12,
+        "z": 0
+      },
+      "zone_id": "owner-zone",
+      "footprint": [
+        3,
+        2
+      ],
+      "layer": "world",
+      "sort_bias": 0,
+      "action": "open_approvals",
+      "label": "총괄·승인석"
+    },
+    {
+      "id": "lounge-sofa",
+      "asset_id": "sofa",
+      "position": {
+        "x": 3,
+        "y": 14,
+        "z": 0
+      },
+      "zone_id": "lounge-zone",
+      "footprint": [
+        3,
+        2
+      ],
+      "layer": "world",
+      "sort_bias": 0,
+      "action": "none",
+      "label": "소파"
+    },
+    {
+      "id": "coffee-station",
+      "asset_id": "coffee-station",
+      "position": {
+        "x": 6,
+        "y": 15,
+        "z": 0
+      },
+      "zone_id": "lounge-zone",
+      "footprint": [
+        1,
+        2
+      ],
+      "layer": "world",
+      "sort_bias": 0,
+      "action": "open_ambience_settings",
+      "label": "커피 공간"
+    },
+    {
+      "id": "plant-back",
+      "asset_id": "plant-large",
+      "position": {
+        "x": 6,
+        "y": 1,
+        "z": 0
+      },
+      "zone_id": "work-zone",
+      "footprint": [
+        1,
+        1
+      ],
+      "layer": "world",
+      "sort_bias": 0,
+      "action": "none",
+      "label": "화분"
+    },
+    {
+      "id": "plant-right",
+      "asset_id": "plant-large",
+      "position": {
+        "x": 22,
+        "y": 8,
+        "z": 0
+      },
+      "zone_id": "work-zone",
+      "footprint": [
+        1,
+        1
+      ],
+      "layer": "world",
+      "sort_bias": 0,
+      "action": "none",
+      "label": "화분"
+    },
+    {
+      "id": "plant-front",
+      "asset_id": "plant-large",
+      "position": {
+        "x": 18,
+        "y": 15,
+        "z": 0
+      },
+      "zone_id": "owner-zone",
+      "footprint": [
+        1,
+        1
+      ],
+      "layer": "world",
+      "sort_bias": 0,
+      "action": "none",
+      "label": "화분"
+    },
+    {
+      "id": "lounge-rug",
+      "asset_id": "rug",
+      "position": {
+        "x": 3,
+        "y": 14,
+        "z": 0
+      },
+      "zone_id": "lounge-zone",
+      "footprint": [
+        5,
+        3
+      ],
+      "layer": "floor_decor",
+      "sort_bias": 0,
+      "action": "none",
+      "label": "러그"
+    },
+    {
+      "id": "runner-console",
+      "asset_id": "runner-console",
+      "position": {
+        "x": 1,
+        "y": 7,
+        "z": 0
+      },
+      "zone_id": "work-zone",
+      "footprint": [
+        1,
+        1
+      ],
+      "layer": "world",
+      "sort_bias": 0,
+      "action": "open_connections",
+      "label": "실행 PC 연결"
+    }
+  ],
+  "interaction": {
+    "seat_click": "open_member_drawer",
+    "seat_double_click": "none",
+    "empty_drag": "pan_camera",
+    "wheel": "ctrl_or_meta_zoom_only",
+    "escape": "close_drawer_then_clear_selection",
+    "keyboard_alternative": "persistent_dom_member_list",
+    "touch_target_min_css_px": 44,
+    "approval_on_canvas": false,
+    "task_assignment_on_drag": false
+  },
+  "motion": {
+    "default": "subtle",
+    "respects_reduced_motion": true,
+    "idle_fps": 4,
+    "work_fps": 6,
+    "renderer_fps_cap": 30,
+    "pause_when_hidden": true,
+    "auto_walk": false,
+    "auto_chat": false
+  },
+  "data": {
+    "source": "existing_authorized_workspace_store",
+    "new_business_tables": false,
+    "demo_default": false,
+    "heartbeat_delay_seconds": 45,
+    "heartbeat_offline_seconds": 90,
+    "unknown_stops_work_animation": true
+  },
+  "reference": {
+    "path": "reference/cozy-office-concept.png",
+    "use": "art_direction_only",
+    "not_a_sprite_sheet": true,
+    "ignore_baked_labels_numbers_dates": true
+  }
+}

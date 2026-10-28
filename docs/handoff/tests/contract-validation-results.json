@@ -1,0 +1,87 @@
+{
+  "scope": "delivered files only; no renderer, browser or live connection test",
+  "validator": {
+    "name": "jsonschema",
+    "version": "4.26.0"
+  },
+  "passed": 19,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "Every JSON file is parseable",
+      "passed": true
+    },
+    {
+      "name": "Scene schema and scene data",
+      "passed": true
+    },
+    {
+      "name": "Snapshot schema and demo fixture",
+      "passed": true
+    },
+    {
+      "name": "Scene IDs are unique",
+      "passed": true
+    },
+    {
+      "name": "Asset IDs are unique",
+      "passed": true
+    },
+    {
+      "name": "All seat/object asset references resolve",
+      "passed": true
+    },
+    {
+      "name": "All zones resolve",
+      "passed": true
+    },
+    {
+      "name": "All object layers resolve",
+      "passed": true
+    },
+    {
+      "name": "Every footprint is inside world and assigned zone",
+      "passed": true
+    },
+    {
+      "name": "Production sprite assets are honestly marked absent",
+      "passed": true
+    },
+    {
+      "name": "Reference and baseline spec exist",
+      "passed": true
+    },
+    {
+      "name": "Demo fixture cannot be mistaken for a live sample",
+      "passed": true
+    },
+    {
+      "name": "Default managed concurrency shown by fixture is one",
+      "passed": true
+    },
+    {
+      "name": "Implementation tasks are not presented as done",
+      "passed": true
+    },
+    {
+      "name": "Implementation dependency IDs resolve",
+      "passed": true
+    },
+    {
+      "name": "Scene schema rejects arbitrary commands",
+      "passed": true
+    },
+    {
+      "name": "Snapshot schema rejects fake workflow state",
+      "passed": true
+    },
+    {
+      "name": "Snapshot schema rejects unexpected credential field",
+      "passed": true
+    },
+    {
+      "name": "Snapshot schema rejects invalid timestamp",
+      "passed": true
+    }
+  ]
+}

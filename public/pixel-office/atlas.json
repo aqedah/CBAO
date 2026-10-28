@@ -1,0 +1,1438 @@
+{
+  "frames": {
+    "meeting-table/0": {
+      "frame": {
+        "x": 3,
+        "y": 3,
+        "w": 192,
+        "h": 128
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "owner-desk/0": {
+      "frame": {
+        "x": 199,
+        "y": 3,
+        "w": 144,
+        "h": 128
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "desk-standard/rear": {
+      "frame": {
+        "x": 347,
+        "y": 3,
+        "w": 128,
+        "h": 128
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "desk-standard/chair": {
+      "frame": {
+        "x": 479,
+        "y": 3,
+        "w": 128,
+        "h": 128
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "desk-standard/front": {
+      "frame": {
+        "x": 611,
+        "y": 3,
+        "w": 128,
+        "h": 128
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "bookshelf/0": {
+      "frame": {
+        "x": 743,
+        "y": 3,
+        "w": 96,
+        "h": 128
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "task-board/0": {
+      "frame": {
+        "x": 843,
+        "y": 3,
+        "w": 96,
+        "h": 128
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "sofa/0": {
+      "frame": {
+        "x": 3,
+        "y": 135,
+        "w": 160,
+        "h": 112
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.8571428571428571
+      }
+    },
+    "coffee-station/0": {
+      "frame": {
+        "x": 167,
+        "y": 135,
+        "w": 80,
+        "h": 112
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.8571428571428571
+      }
+    },
+    "floor-lamp/0": {
+      "frame": {
+        "x": 251,
+        "y": 135,
+        "w": 48,
+        "h": 112
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.8928571428571429
+      }
+    },
+    "rug/0": {
+      "frame": {
+        "x": 303,
+        "y": 135,
+        "w": 192,
+        "h": 96
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "plant-large/0": {
+      "frame": {
+        "x": 499,
+        "y": 135,
+        "w": 64,
+        "h": 96
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "plant-large/1": {
+      "frame": {
+        "x": 567,
+        "y": 135,
+        "w": 64,
+        "h": 96
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "runner-console/0": {
+      "frame": {
+        "x": 635,
+        "y": 135,
+        "w": 64,
+        "h": 96
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "wall-nw/plain": {
+      "frame": {
+        "x": 703,
+        "y": 135,
+        "w": 32,
+        "h": 96
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9166666666666666
+      }
+    },
+    "wall-nw/window": {
+      "frame": {
+        "x": 739,
+        "y": 135,
+        "w": 32,
+        "h": 96
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9166666666666666
+      }
+    },
+    "wall-ne/plain": {
+      "frame": {
+        "x": 775,
+        "y": 135,
+        "w": 32,
+        "h": 96
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9166666666666666
+      }
+    },
+    "wall-ne/window": {
+      "frame": {
+        "x": 811,
+        "y": 135,
+        "w": 32,
+        "h": 96
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9166666666666666
+      }
+    },
+    "avatar-gpt/idle/0": {
+      "frame": {
+        "x": 847,
+        "y": 135,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gpt/idle/1": {
+      "frame": {
+        "x": 915,
+        "y": 135,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gpt/idle/2": {
+      "frame": {
+        "x": 3,
+        "y": 251,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gpt/idle/3": {
+      "frame": {
+        "x": 71,
+        "y": 251,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gpt/typing/0": {
+      "frame": {
+        "x": 139,
+        "y": 251,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gpt/typing/1": {
+      "frame": {
+        "x": 207,
+        "y": 251,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gpt/typing/2": {
+      "frame": {
+        "x": 275,
+        "y": 251,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gpt/typing/3": {
+      "frame": {
+        "x": 343,
+        "y": 251,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gpt/typing/4": {
+      "frame": {
+        "x": 411,
+        "y": 251,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gpt/typing/5": {
+      "frame": {
+        "x": 479,
+        "y": 251,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gpt/reading/0": {
+      "frame": {
+        "x": 547,
+        "y": 251,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gpt/reading/1": {
+      "frame": {
+        "x": 615,
+        "y": 251,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gpt/reading/2": {
+      "frame": {
+        "x": 683,
+        "y": 251,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gpt/reading/3": {
+      "frame": {
+        "x": 751,
+        "y": 251,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gpt/waiting/0": {
+      "frame": {
+        "x": 819,
+        "y": 251,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gpt/waiting/1": {
+      "frame": {
+        "x": 887,
+        "y": 251,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gpt/still/0": {
+      "frame": {
+        "x": 955,
+        "y": 251,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-claude/idle/0": {
+      "frame": {
+        "x": 3,
+        "y": 335,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-claude/idle/1": {
+      "frame": {
+        "x": 71,
+        "y": 335,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-claude/idle/2": {
+      "frame": {
+        "x": 139,
+        "y": 335,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-claude/idle/3": {
+      "frame": {
+        "x": 207,
+        "y": 335,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-claude/typing/0": {
+      "frame": {
+        "x": 275,
+        "y": 335,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-claude/typing/1": {
+      "frame": {
+        "x": 343,
+        "y": 335,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-claude/typing/2": {
+      "frame": {
+        "x": 411,
+        "y": 335,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-claude/typing/3": {
+      "frame": {
+        "x": 479,
+        "y": 335,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-claude/typing/4": {
+      "frame": {
+        "x": 547,
+        "y": 335,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-claude/typing/5": {
+      "frame": {
+        "x": 615,
+        "y": 335,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-claude/reading/0": {
+      "frame": {
+        "x": 683,
+        "y": 335,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-claude/reading/1": {
+      "frame": {
+        "x": 751,
+        "y": 335,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-claude/reading/2": {
+      "frame": {
+        "x": 819,
+        "y": 335,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-claude/reading/3": {
+      "frame": {
+        "x": 887,
+        "y": 335,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-claude/waiting/0": {
+      "frame": {
+        "x": 955,
+        "y": 335,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-claude/waiting/1": {
+      "frame": {
+        "x": 3,
+        "y": 419,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-claude/still/0": {
+      "frame": {
+        "x": 71,
+        "y": 419,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gemini/idle/0": {
+      "frame": {
+        "x": 139,
+        "y": 419,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gemini/idle/1": {
+      "frame": {
+        "x": 207,
+        "y": 419,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gemini/idle/2": {
+      "frame": {
+        "x": 275,
+        "y": 419,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gemini/idle/3": {
+      "frame": {
+        "x": 343,
+        "y": 419,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gemini/typing/0": {
+      "frame": {
+        "x": 411,
+        "y": 419,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gemini/typing/1": {
+      "frame": {
+        "x": 479,
+        "y": 419,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gemini/typing/2": {
+      "frame": {
+        "x": 547,
+        "y": 419,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gemini/typing/3": {
+      "frame": {
+        "x": 615,
+        "y": 419,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gemini/typing/4": {
+      "frame": {
+        "x": 683,
+        "y": 419,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gemini/typing/5": {
+      "frame": {
+        "x": 751,
+        "y": 419,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gemini/reading/0": {
+      "frame": {
+        "x": 819,
+        "y": 419,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gemini/reading/1": {
+      "frame": {
+        "x": 887,
+        "y": 419,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gemini/reading/2": {
+      "frame": {
+        "x": 955,
+        "y": 419,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gemini/reading/3": {
+      "frame": {
+        "x": 3,
+        "y": 503,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gemini/waiting/0": {
+      "frame": {
+        "x": 71,
+        "y": 503,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gemini/waiting/1": {
+      "frame": {
+        "x": 139,
+        "y": 503,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-gemini/still/0": {
+      "frame": {
+        "x": 207,
+        "y": 503,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-notebooklm/idle/0": {
+      "frame": {
+        "x": 275,
+        "y": 503,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-notebooklm/idle/1": {
+      "frame": {
+        "x": 343,
+        "y": 503,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-notebooklm/idle/2": {
+      "frame": {
+        "x": 411,
+        "y": 503,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-notebooklm/idle/3": {
+      "frame": {
+        "x": 479,
+        "y": 503,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-notebooklm/typing/0": {
+      "frame": {
+        "x": 547,
+        "y": 503,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-notebooklm/typing/1": {
+      "frame": {
+        "x": 615,
+        "y": 503,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-notebooklm/typing/2": {
+      "frame": {
+        "x": 683,
+        "y": 503,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-notebooklm/typing/3": {
+      "frame": {
+        "x": 751,
+        "y": 503,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-notebooklm/typing/4": {
+      "frame": {
+        "x": 819,
+        "y": 503,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-notebooklm/typing/5": {
+      "frame": {
+        "x": 887,
+        "y": 503,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-notebooklm/reading/0": {
+      "frame": {
+        "x": 955,
+        "y": 503,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-notebooklm/reading/1": {
+      "frame": {
+        "x": 3,
+        "y": 587,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-notebooklm/reading/2": {
+      "frame": {
+        "x": 71,
+        "y": 587,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-notebooklm/reading/3": {
+      "frame": {
+        "x": 139,
+        "y": 587,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-notebooklm/waiting/0": {
+      "frame": {
+        "x": 207,
+        "y": 587,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-notebooklm/waiting/1": {
+      "frame": {
+        "x": 275,
+        "y": 587,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-notebooklm/still/0": {
+      "frame": {
+        "x": 343,
+        "y": 587,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-codex/idle/0": {
+      "frame": {
+        "x": 411,
+        "y": 587,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-codex/idle/1": {
+      "frame": {
+        "x": 479,
+        "y": 587,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-codex/idle/2": {
+      "frame": {
+        "x": 547,
+        "y": 587,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-codex/idle/3": {
+      "frame": {
+        "x": 615,
+        "y": 587,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-codex/typing/0": {
+      "frame": {
+        "x": 683,
+        "y": 587,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-codex/typing/1": {
+      "frame": {
+        "x": 751,
+        "y": 587,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-codex/typing/2": {
+      "frame": {
+        "x": 819,
+        "y": 587,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-codex/typing/3": {
+      "frame": {
+        "x": 887,
+        "y": 587,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-codex/typing/4": {
+      "frame": {
+        "x": 955,
+        "y": 587,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-codex/typing/5": {
+      "frame": {
+        "x": 3,
+        "y": 671,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-codex/reading/0": {
+      "frame": {
+        "x": 71,
+        "y": 671,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-codex/reading/1": {
+      "frame": {
+        "x": 139,
+        "y": 671,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-codex/reading/2": {
+      "frame": {
+        "x": 207,
+        "y": 671,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-codex/reading/3": {
+      "frame": {
+        "x": 275,
+        "y": 671,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-codex/waiting/0": {
+      "frame": {
+        "x": 343,
+        "y": 671,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-codex/waiting/1": {
+      "frame": {
+        "x": 411,
+        "y": 671,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "avatar-codex/still/0": {
+      "frame": {
+        "x": 479,
+        "y": 671,
+        "w": 64,
+        "h": 80
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9
+      }
+    },
+    "floor-wood/0": {
+      "frame": {
+        "x": 547,
+        "y": 671,
+        "w": 32,
+        "h": 16
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "floor-wood/1": {
+      "frame": {
+        "x": 583,
+        "y": 671,
+        "w": 32,
+        "h": 16
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    }
+  },
+  "animations": {
+    "avatar-gpt/idle": [
+      "avatar-gpt/idle/0",
+      "avatar-gpt/idle/1",
+      "avatar-gpt/idle/2",
+      "avatar-gpt/idle/3"
+    ],
+    "avatar-gpt/typing": [
+      "avatar-gpt/typing/0",
+      "avatar-gpt/typing/1",
+      "avatar-gpt/typing/2",
+      "avatar-gpt/typing/3",
+      "avatar-gpt/typing/4",
+      "avatar-gpt/typing/5"
+    ],
+    "avatar-gpt/reading": [
+      "avatar-gpt/reading/0",
+      "avatar-gpt/reading/1",
+      "avatar-gpt/reading/2",
+      "avatar-gpt/reading/3"
+    ],
+    "avatar-gpt/waiting": [
+      "avatar-gpt/waiting/0",
+      "avatar-gpt/waiting/1"
+    ],
+    "avatar-gpt/still": [
+      "avatar-gpt/still/0"
+    ],
+    "avatar-claude/idle": [
+      "avatar-claude/idle/0",
+      "avatar-claude/idle/1",
+      "avatar-claude/idle/2",
+      "avatar-claude/idle/3"
+    ],
+    "avatar-claude/typing": [
+      "avatar-claude/typing/0",
+      "avatar-claude/typing/1",
+      "avatar-claude/typing/2",
+      "avatar-claude/typing/3",
+      "avatar-claude/typing/4",
+      "avatar-claude/typing/5"
+    ],
+    "avatar-claude/reading": [
+      "avatar-claude/reading/0",
+      "avatar-claude/reading/1",
+      "avatar-claude/reading/2",
+      "avatar-claude/reading/3"
+    ],
+    "avatar-claude/waiting": [
+      "avatar-claude/waiting/0",
+      "avatar-claude/waiting/1"
+    ],
+    "avatar-claude/still": [
+      "avatar-claude/still/0"
+    ],
+    "avatar-gemini/idle": [
+      "avatar-gemini/idle/0",
+      "avatar-gemini/idle/1",
+      "avatar-gemini/idle/2",
+      "avatar-gemini/idle/3"
+    ],
+    "avatar-gemini/typing": [
+      "avatar-gemini/typing/0",
+      "avatar-gemini/typing/1",
+      "avatar-gemini/typing/2",
+      "avatar-gemini/typing/3",
+      "avatar-gemini/typing/4",
+      "avatar-gemini/typing/5"
+    ],
+    "avatar-gemini/reading": [
+      "avatar-gemini/reading/0",
+      "avatar-gemini/reading/1",
+      "avatar-gemini/reading/2",
+      "avatar-gemini/reading/3"
+    ],
+    "avatar-gemini/waiting": [
+      "avatar-gemini/waiting/0",
+      "avatar-gemini/waiting/1"
+    ],
+    "avatar-gemini/still": [
+      "avatar-gemini/still/0"
+    ],
+    "avatar-notebooklm/idle": [
+      "avatar-notebooklm/idle/0",
+      "avatar-notebooklm/idle/1",
+      "avatar-notebooklm/idle/2",
+      "avatar-notebooklm/idle/3"
+    ],
+    "avatar-notebooklm/typing": [
+      "avatar-notebooklm/typing/0",
+      "avatar-notebooklm/typing/1",
+      "avatar-notebooklm/typing/2",
+      "avatar-notebooklm/typing/3",
+      "avatar-notebooklm/typing/4",
+      "avatar-notebooklm/typing/5"
+    ],
+    "avatar-notebooklm/reading": [
+      "avatar-notebooklm/reading/0",
+      "avatar-notebooklm/reading/1",
+      "avatar-notebooklm/reading/2",
+      "avatar-notebooklm/reading/3"
+    ],
+    "avatar-notebooklm/waiting": [
+      "avatar-notebooklm/waiting/0",
+      "avatar-notebooklm/waiting/1"
+    ],
+    "avatar-notebooklm/still": [
+      "avatar-notebooklm/still/0"
+    ],
+    "avatar-codex/idle": [
+      "avatar-codex/idle/0",
+      "avatar-codex/idle/1",
+      "avatar-codex/idle/2",
+      "avatar-codex/idle/3"
+    ],
+    "avatar-codex/typing": [
+      "avatar-codex/typing/0",
+      "avatar-codex/typing/1",
+      "avatar-codex/typing/2",
+      "avatar-codex/typing/3",
+      "avatar-codex/typing/4",
+      "avatar-codex/typing/5"
+    ],
+    "avatar-codex/reading": [
+      "avatar-codex/reading/0",
+      "avatar-codex/reading/1",
+      "avatar-codex/reading/2",
+      "avatar-codex/reading/3"
+    ],
+    "avatar-codex/waiting": [
+      "avatar-codex/waiting/0",
+      "avatar-codex/waiting/1"
+    ],
+    "avatar-codex/still": [
+      "avatar-codex/still/0"
+    ]
+  },
+  "meta": {
+    "image": "atlas.png",
+    "size": {
+      "w": 1024,
+      "h": 1024
+    },
+    "scale": "1",
+    "format": "RGBA8888",
+    "generator": "tools/pixel-art/build-atlas.mjs",
+    "license": "CC0-1.0 — 이 저장소에서 코드로 생성한 원본 픽셀아트. 외부 이미지·생성형 이미지 미사용.",
+    "desk_avatar_offset": {
+      "x": 0,
+      "y": -7
+    },
+    "clips": {
+      "idle": {
+        "frames": 4,
+        "fps": 4
+      },
+      "typing": {
+        "frames": 6,
+        "fps": 6
+      },
+      "reading": {
+        "frames": 4,
+        "fps": 4
+      },
+      "waiting": {
+        "frames": 2,
+        "fps": 2
+      },
+      "still": {
+        "frames": 1,
+        "fps": 0
+      }
+    }
+  }
+}

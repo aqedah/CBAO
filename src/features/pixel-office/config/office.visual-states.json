@@ -1,0 +1,183 @@
+{
+  "schema_version": "1.1.0",
+  "purpose": "presentation_only_not_workflow_enum",
+  "selection_implementation": "starter/office-view-model.mjs",
+  "states": {
+    "unconfigured": {
+      "label": "미연결",
+      "clip": "still",
+      "color_token": "muted",
+      "icon": "plug",
+      "work_motion": false
+    },
+    "unknown": {
+      "label": "상태 확인 필요",
+      "clip": "still",
+      "color_token": "muted",
+      "icon": "question",
+      "work_motion": false
+    },
+    "queued": {
+      "label": "배정 대기",
+      "clip": "waiting",
+      "color_token": "muted",
+      "icon": "clock",
+      "work_motion": false
+    },
+    "starting": {
+      "label": "실행 시작 확인 중",
+      "clip": "still",
+      "color_token": "muted",
+      "icon": "clock",
+      "work_motion": false
+    },
+    "working": {
+      "label": "작업 중",
+      "clip": "typing",
+      "color_token": "active",
+      "icon": "keyboard",
+      "work_motion": true
+    },
+    "testing": {
+      "label": "검사 중",
+      "clip": "typing",
+      "color_token": "active",
+      "icon": "checklist",
+      "work_motion": true
+    },
+    "reviewing": {
+      "label": "검토·자료 확인 중",
+      "clip": "reading",
+      "color_token": "active",
+      "icon": "book",
+      "work_motion": true
+    },
+    "ai_reported": {
+      "label": "작업 중 · AI 보고",
+      "clip": "still",
+      "color_token": "muted",
+      "icon": "message",
+      "work_motion": false
+    },
+    "external_work": {
+      "label": "외부 작업 · 직접 보고",
+      "clip": "still",
+      "color_token": "attention",
+      "icon": "external",
+      "work_motion": false
+    },
+    "external_idle": {
+      "label": "외부 서비스 · 상태 미확인",
+      "clip": "still",
+      "color_token": "muted",
+      "icon": "external",
+      "work_motion": false
+    },
+    "awaiting_owner": {
+      "label": "사용자 판단·승인 대기",
+      "clip": "waiting",
+      "color_token": "attention",
+      "icon": "bell",
+      "work_motion": false
+    },
+    "waiting_input": {
+      "label": "입력 대기",
+      "clip": "waiting",
+      "color_token": "attention",
+      "icon": "question",
+      "work_motion": false
+    },
+    "blocked": {
+      "label": "진행 막힘",
+      "clip": "still",
+      "color_token": "attention",
+      "icon": "warning",
+      "work_motion": false
+    },
+    "error": {
+      "label": "실행 실패",
+      "clip": "still",
+      "color_token": "error",
+      "icon": "warning",
+      "work_motion": false
+    },
+    "stopping": {
+      "label": "중지 요청 처리 중",
+      "clip": "still",
+      "color_token": "attention",
+      "icon": "pause",
+      "work_motion": false
+    },
+    "connection_delayed": {
+      "label": "상태 수신 지연",
+      "clip": "still",
+      "color_token": "muted",
+      "icon": "clock",
+      "work_motion": false
+    },
+    "connection_lost": {
+      "label": "연결 끊김 · 현재 실행 미확인",
+      "clip": "still",
+      "color_token": "muted",
+      "icon": "disconnect",
+      "work_motion": false
+    },
+    "submitted": {
+      "label": "결과 제출 · 검토 대기",
+      "clip": "waiting",
+      "color_token": "attention",
+      "icon": "inbox",
+      "work_motion": false
+    },
+    "completed": {
+      "label": "업무 완료",
+      "clip": "still",
+      "color_token": "active",
+      "icon": "check",
+      "work_motion": false
+    },
+    "cancelled": {
+      "label": "취소 확인",
+      "clip": "still",
+      "color_token": "muted",
+      "icon": "stop",
+      "work_motion": false
+    },
+    "idle": {
+      "label": "대기",
+      "clip": "idle",
+      "color_token": "muted",
+      "icon": "chair",
+      "work_motion": false
+    },
+    "inconsistent": {
+      "label": "상태 불일치 · 새로 확인 필요",
+      "clip": "still",
+      "color_token": "error",
+      "icon": "warning",
+      "work_motion": false
+    },
+    "server_reported": {
+      "label": "실행 중 · 서버 기록",
+      "clip": "still",
+      "color_token": "muted",
+      "icon": "server",
+      "work_motion": false
+    },
+    "run_finished": {
+      "label": "실행 종료 · 결과 확인 필요",
+      "clip": "still",
+      "color_token": "attention",
+      "icon": "inbox",
+      "work_motion": false
+    }
+  },
+  "motion_guard": "work_motion requires fresh runner_observed running evidence; reduced motion/hidden stops all clips",
+  "no_implicit_transitions": [
+    "run.succeeded -> task.done",
+    "external_report.working -> connection.healthy",
+    "heartbeat_timeout -> run.failed",
+    "avatar_arrived -> handoff.accepted",
+    "run.succeeded -> artifact.submitted"
+  ]
+}

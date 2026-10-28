@@ -82,7 +82,7 @@ export function DashboardPage() {
                     <td><Badge tone={v.color}><StateIcon icon={v.icon} /> {v.label}</Badge>{v.pendingOwnerCount > 0 && <> <Badge tone="count">{v.pendingOwnerCount}</Badge></>}</td>
                     <td>{m.task ? <a href={href(`/tasks/${m.task.task_id}`)}>{m.task.project_id} / {m.task.title}</a> : <span className="meta">배정된 업무 없음</span>}{other && <div className="dim-note">다른 프로젝트 작업 중</div>}</td>
                     <td className="meta">{EVIDENCE_LABEL[v.evidence]}<br />{formatTime(v.lastConfirmedAt)} {v.lastConfirmedAt && `(${formatAge(v.lastConfirmedAt, now)})`}</td>
-                    <td></td>
+                    <td><a className="btn small" href={href('/office/room', { project, member: m.member_id })}>자리 보기</a></td>
                   </tr>
                 );
               })}

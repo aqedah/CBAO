@@ -57,4 +57,5 @@ export function match(pattern: string, path: string): Record<string, string> | n
 export const ROUTE_ALIASES: Record<string, string> = {
   '/': '/office',
   '/setup': '/settings/connections',
+  '/room': '/office/room',
 };

@@ -1,0 +1,720 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1.1.0"
+    },
+    "scene_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "purpose": {
+      "const": "presentation_only"
+    },
+    "default_route": {
+      "const": "#/office"
+    },
+    "room_route": {
+      "const": "#/office/room"
+    },
+    "renderer": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "isometric_2_5d"
+        },
+        "recommended_library": {
+          "const": "pixi.js"
+        },
+        "major": {
+          "const": 8
+        },
+        "camera_rotation": {
+          "const": false
+        },
+        "logical_size": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "texture_filter": {
+          "const": "nearest"
+        },
+        "antialias": {
+          "const": false
+        },
+        "pixel_snap": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "recommended_library",
+        "major",
+        "camera_rotation",
+        "logical_size",
+        "texture_filter",
+        "antialias",
+        "pixel_snap"
+      ],
+      "additionalProperties": false
+    },
+    "world": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "rows": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "tile_width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "tile_height": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "elevation_px": {
+          "type": "number",
+          "minimum": 1
+        },
+        "origin": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        }
+      },
+      "required": [
+        "columns",
+        "rows",
+        "tile_width",
+        "tile_height",
+        "elevation_px",
+        "origin"
+      ],
+      "additionalProperties": false
+    },
+    "camera": {
+      "type": "object",
+      "properties": {
+        "zoom_steps": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "minItems": 1
+        },
+        "initial_zoom": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "allow_pan": {
+          "type": "boolean"
+        },
+        "fit_on_first_open": {
+          "type": "boolean"
+        },
+        "snap_translation_to_pixel": {
+          "type": "boolean"
+        },
+        "mobile_mode": {
+          "const": "fit_plus_dom_list"
+        }
+      },
+      "required": [
+        "zoom_steps",
+        "initial_zoom",
+        "allow_pan",
+        "fit_on_first_open",
+        "snap_translation_to_pixel",
+        "mobile_mode"
+      ],
+      "additionalProperties": false
+    },
+    "theme": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "palette": {
+          "type": "object",
+          "properties": {
+            "wall": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            },
+            "floor_light": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            },
+            "floor_shadow": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            },
+            "wood_dark": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            },
+            "plant": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            },
+            "lamp": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            },
+            "ui_surface": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            },
+            "text": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            },
+            "active": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            },
+            "attention": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            },
+            "error": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            },
+            "muted": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            }
+          },
+          "required": [
+            "wall",
+            "floor_light",
+            "floor_shadow",
+            "wood_dark",
+            "plant",
+            "lamp",
+            "ui_surface",
+            "text",
+            "active",
+            "attention",
+            "error",
+            "muted"
+          ],
+          "additionalProperties": false
+        },
+        "light_direction": {
+          "enum": [
+            "upper_left"
+          ]
+        },
+        "ui_text_in_art": {
+          "const": false
+        },
+        "sound_default": {
+          "const": "off"
+        }
+      },
+      "required": [
+        "id",
+        "palette",
+        "light_direction",
+        "ui_text_in_art",
+        "sound_default"
+      ],
+      "additionalProperties": false
+    },
+    "layers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "order": {
+            "type": "integer"
+          },
+          "sort": {
+            "enum": [
+              "fixed",
+              "ground_y",
+              "ground_y_then_bias_then_id",
+              "dom"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "order",
+          "sort"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "zones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "bounds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 4,
+            "maxItems": 4
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "bounds"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "seats": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "member_binding": {
+            "type": "object",
+            "properties": {
+              "seed_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "member_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "auto_create_member": {
+                "const": false
+              }
+            },
+            "required": [
+              "seed_key",
+              "member_id",
+              "auto_create_member"
+            ],
+            "additionalProperties": false
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "suggested_role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "suggested_mode": {
+            "enum": [
+              "external",
+              "managed",
+              "observed",
+              "unconfigured"
+            ]
+          },
+          "zone_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "position": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": 0
+              },
+              "y": {
+                "type": "number",
+                "minimum": 0
+              },
+              "z": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ],
+            "additionalProperties": false
+          },
+          "footprint": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "asset_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "avatar_asset_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "orientation": {
+            "const": "south_east"
+          },
+          "label_offset": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "hit_polygon": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "minItems": 3
+          },
+          "accent": {
+            "type": "string",
+            "minLength": 1
+          },
+          "desk_prop": {
+            "type": "string",
+            "minLength": 1
+          },
+          "binding_required_for_live_status": {
+            "const": true
+          }
+        },
+        "required": [
+          "id",
+          "member_binding",
+          "label",
+          "suggested_role",
+          "suggested_mode",
+          "zone_id",
+          "position",
+          "footprint",
+          "asset_id",
+          "avatar_asset_id",
+          "orientation",
+          "label_offset",
+          "hit_polygon",
+          "accent",
+          "desk_prop",
+          "binding_required_for_live_status"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "objects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "asset_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "position": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": 0
+              },
+              "y": {
+                "type": "number",
+                "minimum": 0
+              },
+              "z": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ],
+            "additionalProperties": false
+          },
+          "zone_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "footprint": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "layer": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sort_bias": {
+            "type": "number"
+          },
+          "action": {
+            "enum": [
+              "none",
+              "open_records",
+              "open_tasks",
+              "open_handoffs",
+              "open_approvals",
+              "open_ambience_settings",
+              "open_connections"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "asset_id",
+          "position",
+          "zone_id",
+          "footprint",
+          "layer",
+          "sort_bias",
+          "action",
+          "label"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "interaction": {
+      "type": "object",
+      "properties": {
+        "seat_click": {
+          "const": "open_member_drawer"
+        },
+        "seat_double_click": {
+          "const": "none"
+        },
+        "empty_drag": {
+          "const": "pan_camera"
+        },
+        "wheel": {
+          "const": "ctrl_or_meta_zoom_only"
+        },
+        "escape": {
+          "const": "close_drawer_then_clear_selection"
+        },
+        "keyboard_alternative": {
+          "const": "persistent_dom_member_list"
+        },
+        "touch_target_min_css_px": {
+          "const": 44
+        },
+        "approval_on_canvas": {
+          "const": false
+        },
+        "task_assignment_on_drag": {
+          "const": false
+        }
+      },
+      "required": [
+        "seat_click",
+        "seat_double_click",
+        "empty_drag",
+        "wheel",
+        "escape",
+        "keyboard_alternative",
+        "touch_target_min_css_px",
+        "approval_on_canvas",
+        "task_assignment_on_drag"
+      ],
+      "additionalProperties": false
+    },
+    "motion": {
+      "type": "object",
+      "properties": {
+        "default": {
+          "enum": [
+            "subtle",
+            "off"
+          ]
+        },
+        "respects_reduced_motion": {
+          "const": true
+        },
+        "idle_fps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 12
+        },
+        "work_fps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 12
+        },
+        "renderer_fps_cap": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60
+        },
+        "pause_when_hidden": {
+          "const": true
+        },
+        "auto_walk": {
+          "const": false
+        },
+        "auto_chat": {
+          "const": false
+        }
+      },
+      "required": [
+        "default",
+        "respects_reduced_motion",
+        "idle_fps",
+        "work_fps",
+        "renderer_fps_cap",
+        "pause_when_hidden",
+        "auto_walk",
+        "auto_chat"
+      ],
+      "additionalProperties": false
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "const": "existing_authorized_workspace_store"
+        },
+        "new_business_tables": {
+          "const": false
+        },
+        "demo_default": {
+          "const": false
+        },
+        "heartbeat_delay_seconds": {
+          "const": 45
+        },
+        "heartbeat_offline_seconds": {
+          "const": 90
+        },
+        "unknown_stops_work_animation": {
+          "const": true
+        }
+      },
+      "required": [
+        "source",
+        "new_business_tables",
+        "demo_default",
+        "heartbeat_delay_seconds",
+        "heartbeat_offline_seconds",
+        "unknown_stops_work_animation"
+      ],
+      "additionalProperties": false
+    },
+    "reference": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "const": "reference/cozy-office-concept.png"
+        },
+        "use": {
+          "const": "art_direction_only"
+        },
+        "not_a_sprite_sheet": {
+          "const": true
+        },
+        "ignore_baked_labels_numbers_dates": {
+          "const": true
+        }
+      },
+      "required": [
+        "path",
+        "use",
+        "not_a_sprite_sheet",
+        "ignore_baked_labels_numbers_dates"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "scene_id",
+    "title",
+    "purpose",
+    "default_route",
+    "room_route",
+    "renderer",
+    "world",
+    "camera",
+    "theme",
+    "layers",
+    "zones",
+    "seats",
+    "objects",
+    "interaction",
+    "motion",
+    "data",
+    "reference"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pixel Office scene configuration",
+  "description": "Static art/layout contract. Does not grant access or create team members."
+}

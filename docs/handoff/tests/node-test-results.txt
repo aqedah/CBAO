@@ -1,0 +1,200 @@
+
+> ai-office-pixel-handoff@1.1.0 test
+> node --test tests/*.test.mjs
+
+TAP version 13
+# Subtest: fresh observed run animates, and input remains unchanged
+ok 1 - fresh observed run animates, and input remains unchanged
+  ---
+  duration_ms: 1.530411
+  type: 'test'
+  ...
+# Subtest: external work report never generates live working animation
+ok 2 - external work report never generates live working animation
+  ---
+  duration_ms: 0.188242
+  type: 'test'
+  ...
+# Subtest: 45-second heartbeat boundary becomes delayed
+ok 3 - 45-second heartbeat boundary becomes delayed
+  ---
+  duration_ms: 1.33304
+  type: 'test'
+  ...
+# Subtest: 90-second heartbeat boundary becomes offline, not failure
+ok 4 - 90-second heartbeat boundary becomes offline, not failure
+  ---
+  duration_ms: 0.27361
+  type: 'test'
+  ...
+# Subtest: missing heartbeat cannot be upgraded by a healthy flag
+ok 5 - missing heartbeat cannot be upgraded by a healthy flag
+  ---
+  duration_ms: 0.236518
+  type: 'test'
+  ...
+# Subtest: old feed snapshot invalidates work motion even with a fresh heartbeat
+ok 6 - old feed snapshot invalidates work motion even with a fresh heartbeat
+  ---
+  duration_ms: 0.13644
+  type: 'test'
+  ...
+# Subtest: fresh PC heartbeat does not replace stale process confirmation
+ok 7 - fresh PC heartbeat does not replace stale process confirmation
+  ---
+  duration_ms: 0.33489
+  type: 'test'
+  ...
+# Subtest: model-reported progress is not runner-observed activity
+ok 8 - model-reported progress is not runner-observed activity
+  ---
+  duration_ms: 0.131893
+  type: 'test'
+  ...
+# Subtest: successful run is finished, not proof of artifact submission or task done
+ok 9 - successful run is finished, not proof of artifact submission or task done
+  ---
+  duration_ms: 0.283982
+  type: 'test'
+  ...
+# Subtest: owner approval state is distinct from successful execution
+ok 10 - owner approval state is distinct from successful execution
+  ---
+  duration_ms: 0.385206
+  type: 'test'
+  ...
+# Subtest: task done plus terminated run can show completed even with offline connection
+ok 11 - task done plus terminated run can show completed even with offline connection
+  ---
+  duration_ms: 0.160487
+  type: 'test'
+  ...
+# Subtest: closed task plus running run is flagged as inconsistent
+ok 12 - closed task plus running run is flagged as inconsistent
+  ---
+  duration_ms: 0.085116
+  type: 'test'
+  ...
+# Subtest: offline stopping is pending, never confirmed cancelled
+ok 13 - offline stopping is pending, never confirmed cancelled
+  ---
+  duration_ms: 0.064223
+  type: 'test'
+  ...
+# Subtest: cancel capability may queue an explicit request offline; no automatic command
+ok 14 - cancel capability may queue an explicit request offline; no automatic command
+  ---
+  duration_ms: 0.060565
+  type: 'test'
+  ...
+# Subtest: reduced motion and hidden route both stop animation but preserve status
+ok 15 - reduced motion and hidden route both stop animation but preserve status
+  ---
+  duration_ms: 0.122731
+  type: 'test'
+  ...
+# Subtest: testing and reviewing phases use explicit run data
+ok 16 - testing and reviewing phases use explicit run data
+  ---
+  duration_ms: 0.06368
+  type: 'test'
+  ...
+# Subtest: future timestamps outside tolerance are unknown
+ok 17 - future timestamps outside tolerance are unknown
+  ---
+  duration_ms: 0.064637
+  type: 'test'
+  ...
+# Subtest: external run data is rejected as inconsistent
+ok 18 - external run data is rejected as inconsistent
+  ---
+  duration_ms: 0.053557
+  type: 'test'
+  ...
+# Subtest: demo input is rejected by live snapshot gate
+ok 19 - demo input is rejected by live snapshot gate
+  ---
+  duration_ms: 0.442014
+  type: 'test'
+  ...
+# Subtest: snapshot gate rejects foreign workspace and duplicate member IDs
+ok 20 - snapshot gate rejects foreign workspace and duplicate member IDs
+  ---
+  duration_ms: 0.302243
+  type: 'test'
+  ...
+# Subtest: equal and older snapshots cannot roll state back
+ok 21 - equal and older snapshots cannot roll state back
+  ---
+  duration_ms: 0.097125
+  type: 'test'
+  ...
+# Subtest: newer snapshot is accepted without synthesizing events
+ok 22 - newer snapshot is accepted without synthesizing events
+  ---
+  duration_ms: 0.057807
+  type: 'test'
+  ...
+# Subtest: seat labels never auto-bind to real member IDs
+ok 23 - seat labels never auto-bind to real member IDs
+  ---
+  duration_ms: 0.132837
+  type: 'test'
+  ...
+# Subtest: isometric transform round-trips positive fractional and elevated coordinates
+ok 24 - isometric transform round-trips positive fractional and elevated coordinates
+  ---
+  duration_ms: 0.403103
+  type: 'test'
+  ...
+# Subtest: DOM and canvas coordinates match pan/zoom and element offset
+ok 25 - DOM and canvas coordinates match pan/zoom and element offset
+  ---
+  duration_ms: 0.697653
+  type: 'test'
+  ...
+# Subtest: depth uses ground contact, not sprite head height
+ok 26 - depth uses ground contact, not sprite head height
+  ---
+  duration_ms: 0.39014
+  type: 'test'
+  ...
+# Subtest: depth ties are deterministic
+ok 27 - depth ties are deterministic
+  ---
+  duration_ms: 0.118094
+  type: 'test'
+  ...
+# Subtest: invalid camera and grid dimensions fail explicitly
+ok 28 - invalid camera and grid dimensions fail explicitly
+  ---
+  duration_ms: 0.125066
+  type: 'test'
+  ...
+# Subtest: every fixture visual state exists in the JSON style contract
+ok 29 - every fixture visual state exists in the JSON style contract
+  ---
+  duration_ms: 0.270943
+  type: 'test'
+  ...
+# Subtest: server-derived run record is not mislabeled as AI self-report
+ok 30 - server-derived run record is not mislabeled as AI self-report
+  ---
+  duration_ms: 0.318539
+  type: 'test'
+  ...
+# Subtest: manual submitted report remains manual, not verified artifact delivery
+ok 31 - manual submitted report remains manual, not verified artifact delivery
+  ---
+  duration_ms: 0.116598
+  type: 'test'
+  ...
+1..31
+# tests 31
+# suites 0
+# pass 31
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 101.122812

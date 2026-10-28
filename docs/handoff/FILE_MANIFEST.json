@@ -1,0 +1,132 @@
+{
+  "package": "AI_OFFICE_PIXEL_HANDOFF",
+  "version": "1.1.0",
+  "scope": "specification_and_tested_view_model_starter_not_complete_app",
+  "files": [
+    {
+      "path": "ACCEPTANCE_TESTS.md",
+      "bytes": 3209,
+      "sha256": "695f2beebb9e27d383ccb8b874b22de2d2d74499a395039323c3c5e933eefa18"
+    },
+    {
+      "path": "ART_ASSET_GUIDE.md",
+      "bytes": 7207,
+      "sha256": "a7e99acf0e99b17fcfbe6d79a168e7d15efce14986ca180bf430059147e3c65d"
+    },
+    {
+      "path": "CLAUDE_START_HERE.md",
+      "bytes": 5242,
+      "sha256": "b961033361b33ecabe318adb94a89f122c856ba63f300bd8c762335c518ed58f"
+    },
+    {
+      "path": "INTEGRATION_CONTRACT.md",
+      "bytes": 8274,
+      "sha256": "895baf7d64438c43c85be1ea93d59d0e47d748676e7245d31484a2f3a1c85aab"
+    },
+    {
+      "path": "PIXEL_OFFICE_SPEC.md",
+      "bytes": 15976,
+      "sha256": "0c8da8a5013d65ebf2e745909dea5b7bc1829c421edaeb430c7f88029b1cd265"
+    },
+    {
+      "path": "README.md",
+      "bytes": 3309,
+      "sha256": "871bf94b3ea5c3f055c7995e27f1419cc3a2c5055dd3a8d223bac06c363e90c2"
+    },
+    {
+      "path": "SOURCES.md",
+      "bytes": 1704,
+      "sha256": "cf23fc19cee375589da04be48301c4158c6af44a6a695c3ba7b3b295f79961db"
+    },
+    {
+      "path": "SPEC_DELTA.md",
+      "bytes": 2362,
+      "sha256": "c46fd596f4c2528241ad13fe0f37d4973e0f3a709ff37f41e042cda4f0a6345b"
+    },
+    {
+      "path": "VALIDATION_REPORT.md",
+      "bytes": 2296,
+      "sha256": "0bddcf213bdf5a83f128ed0152779c3d56a79556ff4f5b601b1bd0f6e9c6c39e"
+    },
+    {
+      "path": "contracts/office-scene.schema.json",
+      "bytes": 16353,
+      "sha256": "b64d93a8dd50f7fc278bc9f6e0b9001cd6e061402d88ed549e1c5370146bcf5e"
+    },
+    {
+      "path": "contracts/office-snapshot.schema.json",
+      "bytes": 6765,
+      "sha256": "d5af1f7fb604a9177d2a086b09eb3c37876919eae2f9ad767376eb22da4a23db"
+    },
+    {
+      "path": "examples/office.snapshot.demo.json",
+      "bytes": 3641,
+      "sha256": "61493babe9513a68ccd682cd1b0d3e3f1abc970da7d268311ca7dcc7420561bf"
+    },
+    {
+      "path": "implementation.plan.json",
+      "bytes": 4596,
+      "sha256": "f17a37b1cc57f2ca3ecb99c77bfa1a4d454f77f7a92239b666aa2a52d3cc1c51"
+    },
+    {
+      "path": "office.assets.json",
+      "bytes": 12698,
+      "sha256": "9363e37007e2c768cecea194c9e2a8055b0f4c83986f43572196f6fe89bda410"
+    },
+    {
+      "path": "office.scene.json",
+      "bytes": 12141,
+      "sha256": "ddbb569615fc1346f13b2b823fce7c9e53ef79b4d8d87deb5d3434b5652bfd42"
+    },
+    {
+      "path": "office.visual-states.json",
+      "bytes": 4699,
+      "sha256": "e7eb0f310a9567edfad8fcefd8f8c616460b4b88088ccec181741e2d1d625d48"
+    },
+    {
+      "path": "package.json",
+      "bytes": 294,
+      "sha256": "d0cfc556ae109958ebb2a5cf84c464765564b7e9397203a8c42ce494397d6f09"
+    },
+    {
+      "path": "reference/AI_OFFICE_V1_SPEC.original.md",
+      "bytes": 42990,
+      "sha256": "79ce8e8875aa6b687786d1c0d215fa647abb8a5873628984cdbce14d9debd79f"
+    },
+    {
+      "path": "reference/cozy-office-concept.png",
+      "bytes": 2582970,
+      "sha256": "fe002dbad819fb4ac21d6a3e009c2e18299bc286e027481ece2decec58a4029c"
+    },
+    {
+      "path": "starter/isometric.mjs",
+      "bytes": 2126,
+      "sha256": "2ada9f38b865d9bdb0c635212d7e4fc7a9fc4666af711b24563ae37d012353aa"
+    },
+    {
+      "path": "starter/office-view-model.mjs",
+      "bytes": 8808,
+      "sha256": "36266741c8850c0b051a222024be3c521d2f1f6f01b3c6c4e74414e208471de8"
+    },
+    {
+      "path": "tests/contract-validation-results.json",
+      "bytes": 1892,
+      "sha256": "958b6fa618b93eec04b1410a80e5b07577fd7fc3594368f28723bb559668d05f"
+    },
+    {
+      "path": "tests/core.test.mjs",
+      "bytes": 8072,
+      "sha256": "5e9b77fdd684bc3b545c9f05851f3a2408775f52b6feb4d4c36758d7d4cd4400"
+    },
+    {
+      "path": "tests/node-test-results.txt",
+      "bytes": 5955,
+      "sha256": "c0e1b11f3c86501b486aa1c8dc0c0a2af9087af0ba975ae558dc75393bbb6316"
+    },
+    {
+      "path": "tests/validate_contracts.py",
+      "bytes": 5071,
+      "sha256": "0dcd2be2be17d636d142bc3cf3fb72bf83ee467c048570cbd97764bed43e1178"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+// 따뜻한 사무실 팔레트 (office.scene.json theme 기준). 광원: 좌측 상단.
+export const P = {
+  line: '#4a3326',
+  lineSoft: '#6b4a38',
+  wall: '#f1dfc3', wallShade: '#e4cfae', wallTrim: '#d9b98f',
+  window: '#bfd8e6', windowLight: '#dcecf3', windowFrame: '#8c5d3f', sky: '#cfe3ec',
+  floorLight: '#d7ab78', floorDark: '#c99a67', floorLine: '#b6855a', floorShadow: '#a9744f',
+  oakTop: '#c88f5c', oakLeft: '#a9744f', oakRight: '#8c5d3f', oakDark: '#70513e',
+  cream: '#f3e7cf', creamShade: '#dfcfae',
+  sage: '#617952', sageLight: '#7f9870', sageDark: '#4a5e3f',
+  amber: '#eac076', amberDark: '#c99a4a',
+  terracotta: '#c0704f', terracottaDark: '#9a5538',
+  blue: '#5f7f9c', blueDark: '#46617a',
+  slate: '#5e6672', slateDark: '#454c56',
+  skin: '#f0c9a6', skinShade: '#d9ad88',
+  hairBrown: '#5a3b2a', hairDark: '#2f2420', hairAuburn: '#7a4a33', hairAsh: '#8f8378', hairBlack: '#23201e',
+  monitor: '#3a3f47', monitorScreen: '#6d7d86', monitorScreenLight: '#8fa0a9',
+  paper: '#fbf5e8', mug: '#e9e1d2', mugDark: '#c9bda7',
+  metal: '#8d8f93', metalDark: '#5f6165',
+  rug: '#b7653f', rugLight: '#d08a5c', rugDark: '#8f4b2f',
+  board: '#f6efe0', boardFrame: '#8c5d3f', stickyY: '#f2d77a', stickyG: '#b9d3a0', stickyP: '#f0b4b4',
+  shadow: '#000000',
+};

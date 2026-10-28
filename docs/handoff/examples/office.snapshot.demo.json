@@ -1,0 +1,134 @@
+{
+  "schema_version": "1.1.0",
+  "is_demo": true,
+  "workspace_id": "demo-pixel-office",
+  "snapshot_sequence": 1,
+  "captured_at": "2026-10-28T00:14:00Z",
+  "members": [
+    {
+      "member_id": "gpt",
+      "display_name": "GPT",
+      "role_label": "연구·설계·검수",
+      "execution_mode": "external",
+      "connection_state": "unknown",
+      "last_heartbeat_at": null,
+      "task": {
+        "task_id": "DEMO-MILAL-001",
+        "project_id": "MILAL",
+        "revision": 1,
+        "status": "awaiting_owner",
+        "title": "계층 규칙 대안 비교"
+      },
+      "run": null,
+      "external_report": null,
+      "pending_owner_count": 1,
+      "capabilities": {
+        "request_cancel": false
+      }
+    },
+    {
+      "member_id": "claude",
+      "display_name": "Claude",
+      "role_label": "구현·개발",
+      "execution_mode": "managed",
+      "connection_state": "healthy",
+      "last_heartbeat_at": "2026-10-28T00:14:00Z",
+      "task": {
+        "task_id": "DEMO-CBSR-001",
+        "project_id": "CBSR",
+        "revision": 1,
+        "status": "active",
+        "title": "배경 태그 선택 규칙 구현"
+      },
+      "run": {
+        "run_id": "demo-run-01",
+        "status": "running",
+        "evidence_source": "runner_observed",
+        "last_confirmed_at": "2026-10-28T00:14:00Z",
+        "phase": "implementing"
+      },
+      "external_report": null,
+      "pending_owner_count": 0,
+      "capabilities": {
+        "request_cancel": true
+      }
+    },
+    {
+      "member_id": "gemini",
+      "display_name": "Gemini",
+      "role_label": "자료·이미지",
+      "execution_mode": "external",
+      "connection_state": "unknown",
+      "last_heartbeat_at": null,
+      "task": {
+        "task_id": "DEMO-CBSR-002",
+        "project_id": "CBSR",
+        "revision": 1,
+        "status": "active",
+        "title": "배경 이미지 시안 정리"
+      },
+      "run": null,
+      "external_report": {
+        "status": "working",
+        "reported_at": "2026-10-28T00:14:00Z",
+        "evidence_source": "user_reported"
+      },
+      "pending_owner_count": 0,
+      "capabilities": {
+        "request_cancel": false
+      }
+    },
+    {
+      "member_id": "notebooklm",
+      "display_name": "NotebookLM",
+      "role_label": "출처·문서 정리",
+      "execution_mode": "external",
+      "connection_state": "unknown",
+      "last_heartbeat_at": null,
+      "task": {
+        "task_id": "DEMO-MILAL-002",
+        "project_id": "MILAL",
+        "revision": 1,
+        "status": "review",
+        "title": "참고자료와 출처 연결"
+      },
+      "run": null,
+      "external_report": {
+        "status": "submitted",
+        "reported_at": "2026-10-28T00:14:00Z",
+        "evidence_source": "user_reported"
+      },
+      "pending_owner_count": 0,
+      "capabilities": {
+        "request_cancel": false
+      }
+    },
+    {
+      "member_id": "codex",
+      "display_name": "Codex",
+      "role_label": "코드·검사",
+      "execution_mode": "managed",
+      "connection_state": "healthy",
+      "last_heartbeat_at": "2026-10-28T00:14:00Z",
+      "task": {
+        "task_id": "DEMO-CBSR-003",
+        "project_id": "CBSR",
+        "revision": 1,
+        "status": "ready",
+        "title": "회귀 검사"
+      },
+      "run": {
+        "run_id": "demo-run-02",
+        "status": "queued",
+        "evidence_source": "runner_observed",
+        "last_confirmed_at": "2026-10-28T00:14:00Z",
+        "phase": "testing"
+      },
+      "external_report": null,
+      "pending_owner_count": 0,
+      "capabilities": {
+        "request_cancel": false
+      }
+    }
+  ]
+}

@@ -7,7 +7,7 @@ import { newIdempotencyKey, CommandError } from '../../store/commands';
 export function NewTaskPage() {
   const ws = useStoreState(s => s.workspace);
   const route = useRoute();
-  const [project, setProject] = useState(route.query.get('project') ?? '');
+  const [project, setProject] = useState(() => route.query.get('project') ?? (ws && ws.projects.filter(p => !p.archived).length === 1 ? ws.projects.filter(p => !p.archived)[0].project_id : ''));
   const [assignee, setAssignee] = useState(route.query.get('assignee') ?? '');
   const [title, setTitle] = useState('');
   const [goal, setGoal] = useState('');

@@ -1,0 +1,9 @@
+{
+  "name": "ai-office-pixel-handoff",
+  "private": true,
+  "version": "1.1.0",
+  "type": "module",
+  "description": "Documentation and read-only view-model starter. Not a complete office app or renderer.",
+  "scripts": {"test": "node --test tests/*.test.mjs"},
+  "engines": {"node": ">=20"}
+}

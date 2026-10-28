@@ -1,0 +1,595 @@
+{
+  "schema_version": "1.1.0",
+  "production_status": "reference_only_no_production_sprites",
+  "included_reference": "reference/cozy-office-concept.png",
+  "assets": [
+    {
+      "id": "floor-wood",
+      "kind": "tile",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        32,
+        16
+      ],
+      "anchor": [
+        0.5,
+        0.5
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "32×16 다이아몬드 타일. 반복 이음새 확인. 바닥 클릭 기능 없음.",
+      "license_record": null
+    },
+    {
+      "id": "room-shell",
+      "kind": "background",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        960,
+        600
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "뒷벽·창문만. 바닥은 floor-wood 타일로 별도 렌더링. 책상·사람·문자·상태판 없음.",
+      "license_record": null
+    },
+    {
+      "id": "desk-standard",
+      "kind": "composite",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        128,
+        128
+      ],
+      "anchor": [
+        0.5,
+        0.875
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "rear/chair/avatar/front 분할. 캐릭터 다리가 책상 아래 가려져야 한다.",
+      "license_record": null,
+      "parts": [
+        {
+          "name": "rear",
+          "runtime_path": null,
+          "offset": [
+            0,
+            0
+          ]
+        },
+        {
+          "name": "chair",
+          "runtime_path": null,
+          "offset": [
+            0,
+            0
+          ]
+        },
+        {
+          "name": "avatar_slot",
+          "runtime_path": null,
+          "offset": [
+            0,
+            -18
+          ]
+        },
+        {
+          "name": "front",
+          "runtime_path": null,
+          "offset": [
+            0,
+            0
+          ]
+        }
+      ],
+      "parts_note": "offset은 최초 맞춤값. 최종 픽셀 에셋으로 접지·가림 검수 후 조정."
+    },
+    {
+      "id": "bookshelf",
+      "kind": "prop",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        96,
+        128
+      ],
+      "anchor": [
+        0.5,
+        0.875
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "공유 자료 접근점. 책 표지 문자를 그리지 않는다.",
+      "license_record": null
+    },
+    {
+      "id": "task-board",
+      "kind": "prop",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        96,
+        128
+      ],
+      "anchor": [
+        0.5,
+        0.875
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "칠판은 비워 둔다. 숫자와 제목은 DOM.",
+      "license_record": null
+    },
+    {
+      "id": "meeting-table",
+      "kind": "prop",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        192,
+        128
+      ],
+      "anchor": [
+        0.5,
+        0.875
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "검토·인계 기록을 여는 장소. 자동 토론 연출 금지.",
+      "license_record": null
+    },
+    {
+      "id": "owner-desk",
+      "kind": "prop",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        144,
+        128
+      ],
+      "anchor": [
+        0.5,
+        0.875
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "사용자 승인 자리. 승인 개수는 DOM.",
+      "license_record": null
+    },
+    {
+      "id": "sofa",
+      "kind": "prop",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        160,
+        112
+      ],
+      "anchor": [
+        0.5,
+        0.875
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "짙은 세이지 천과 오크 프레임.",
+      "license_record": null
+    },
+    {
+      "id": "coffee-station",
+      "kind": "prop",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        80,
+        112
+      ],
+      "anchor": [
+        0.5,
+        0.875
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "커피잔·목제 선반. 음료 움직임은 선택 효과.",
+      "license_record": null
+    },
+    {
+      "id": "plant-large",
+      "kind": "prop",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        64,
+        96
+      ],
+      "anchor": [
+        0.5,
+        0.875
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "2~3종 변형. 잎의 채도는 낮게.",
+      "license_record": null
+    },
+    {
+      "id": "rug",
+      "kind": "prop",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        192,
+        96
+      ],
+      "anchor": [
+        0.5,
+        0.875
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "바닥 장식. 가구보다 먼저 그린다.",
+      "license_record": null
+    },
+    {
+      "id": "runner-console",
+      "kind": "prop",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        64,
+        96
+      ],
+      "anchor": [
+        0.5,
+        0.875
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "연결 상태는 실제 데이터로 표시. 상태 없는 초록 불 금지.",
+      "license_record": null
+    },
+    {
+      "id": "avatar-gpt",
+      "kind": "sprite_sheet",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        64,
+        80
+      ],
+      "anchor": [
+        0.5,
+        0.9
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "GPT 고정 외형, sage 계열 의복. 로고 머리 대신 원본 캐릭터. 앉은 자세. 모든 프레임 동일 피벗.",
+      "license_record": null,
+      "clips": [
+        {
+          "id": "idle",
+          "frames": 4,
+          "fps": 4,
+          "loop": true
+        },
+        {
+          "id": "typing",
+          "frames": 6,
+          "fps": 6,
+          "loop": true
+        },
+        {
+          "id": "reading",
+          "frames": 4,
+          "fps": 4,
+          "loop": true
+        },
+        {
+          "id": "waiting",
+          "frames": 2,
+          "fps": 2,
+          "loop": true
+        },
+        {
+          "id": "still",
+          "frames": 1,
+          "fps": 0,
+          "loop": false
+        }
+      ]
+    },
+    {
+      "id": "avatar-claude",
+      "kind": "sprite_sheet",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        64,
+        80
+      ],
+      "anchor": [
+        0.5,
+        0.9
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "Claude 고정 외형, terracotta 계열 의복. 로고 머리 대신 원본 캐릭터. 앉은 자세. 모든 프레임 동일 피벗.",
+      "license_record": null,
+      "clips": [
+        {
+          "id": "idle",
+          "frames": 4,
+          "fps": 4,
+          "loop": true
+        },
+        {
+          "id": "typing",
+          "frames": 6,
+          "fps": 6,
+          "loop": true
+        },
+        {
+          "id": "reading",
+          "frames": 4,
+          "fps": 4,
+          "loop": true
+        },
+        {
+          "id": "waiting",
+          "frames": 2,
+          "fps": 2,
+          "loop": true
+        },
+        {
+          "id": "still",
+          "frames": 1,
+          "fps": 0,
+          "loop": false
+        }
+      ]
+    },
+    {
+      "id": "avatar-gemini",
+      "kind": "sprite_sheet",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        64,
+        80
+      ],
+      "anchor": [
+        0.5,
+        0.9
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "Gemini 고정 외형, blue 계열 의복. 로고 머리 대신 원본 캐릭터. 앉은 자세. 모든 프레임 동일 피벗.",
+      "license_record": null,
+      "clips": [
+        {
+          "id": "idle",
+          "frames": 4,
+          "fps": 4,
+          "loop": true
+        },
+        {
+          "id": "typing",
+          "frames": 6,
+          "fps": 6,
+          "loop": true
+        },
+        {
+          "id": "reading",
+          "frames": 4,
+          "fps": 4,
+          "loop": true
+        },
+        {
+          "id": "waiting",
+          "frames": 2,
+          "fps": 2,
+          "loop": true
+        },
+        {
+          "id": "still",
+          "frames": 1,
+          "fps": 0,
+          "loop": false
+        }
+      ]
+    },
+    {
+      "id": "avatar-notebooklm",
+      "kind": "sprite_sheet",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        64,
+        80
+      ],
+      "anchor": [
+        0.5,
+        0.9
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "NotebookLM 고정 외형, cream 계열 의복. 로고 머리 대신 원본 캐릭터. 앉은 자세. 모든 프레임 동일 피벗.",
+      "license_record": null,
+      "clips": [
+        {
+          "id": "idle",
+          "frames": 4,
+          "fps": 4,
+          "loop": true
+        },
+        {
+          "id": "typing",
+          "frames": 6,
+          "fps": 6,
+          "loop": true
+        },
+        {
+          "id": "reading",
+          "frames": 4,
+          "fps": 4,
+          "loop": true
+        },
+        {
+          "id": "waiting",
+          "frames": 2,
+          "fps": 2,
+          "loop": true
+        },
+        {
+          "id": "still",
+          "frames": 1,
+          "fps": 0,
+          "loop": false
+        }
+      ]
+    },
+    {
+      "id": "avatar-codex",
+      "kind": "sprite_sheet",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        64,
+        80
+      ],
+      "anchor": [
+        0.5,
+        0.9
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "Codex 고정 외형, slate 계열 의복. 로고 머리 대신 원본 캐릭터. 앉은 자세. 모든 프레임 동일 피벗.",
+      "license_record": null,
+      "clips": [
+        {
+          "id": "idle",
+          "frames": 4,
+          "fps": 4,
+          "loop": true
+        },
+        {
+          "id": "typing",
+          "frames": 6,
+          "fps": 6,
+          "loop": true
+        },
+        {
+          "id": "reading",
+          "frames": 4,
+          "fps": 4,
+          "loop": true
+        },
+        {
+          "id": "waiting",
+          "frames": 2,
+          "fps": 2,
+          "loop": true
+        },
+        {
+          "id": "still",
+          "frames": 1,
+          "fps": 0,
+          "loop": false
+        }
+      ]
+    },
+    {
+      "id": "light-overlay",
+      "kind": "overlay",
+      "status": "to_produce",
+      "runtime_path": null,
+      "frame_size": [
+        960,
+        600
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "directions": [
+        "south_east"
+      ],
+      "transparent": true,
+      "sampling": "nearest",
+      "notes": "반투명 앰버 광량. 움직임/실시간 그림자 없음.",
+      "license_record": null
+    }
+  ],
+  "packing": {
+    "recommended_format": "png_rgba",
+    "atlas_frame_name": "{asset_id}/{clip}/{frame_index}",
+    "extrude_pixels": 2,
+    "transparent_padding_pixels": 2,
+    "trim_avatar_frames": false,
+    "sprite_sheets_consistent_origin": true
+  },
+  "prohibited": [
+    "baked_business_text",
+    "baked_progress_percent",
+    "baked_weather_date",
+    "whole_concept_as_final_ui",
+    "unknown_license_assets"
+  ]
+}

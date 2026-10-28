@@ -1,0 +1,253 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1.1.0"
+    },
+    "is_demo": {
+      "type": "boolean"
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "snapshot_sequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "members": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "member_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role_label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "execution_mode": {
+            "enum": [
+              "managed",
+              "observed",
+              "external",
+              "unconfigured"
+            ]
+          },
+          "connection_state": {
+            "enum": [
+              "healthy",
+              "delayed",
+              "offline",
+              "unknown"
+            ]
+          },
+          "last_heartbeat_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "task_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "project_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "revision": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "status": {
+                    "enum": [
+                      "draft",
+                      "ready",
+                      "active",
+                      "review",
+                      "awaiting_owner",
+                      "done",
+                      "needs_changes",
+                      "blocked",
+                      "cancelled"
+                    ]
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "task_id",
+                  "project_id",
+                  "revision",
+                  "status",
+                  "title"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "run": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "run_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "status": {
+                    "enum": [
+                      "queued",
+                      "leased",
+                      "starting",
+                      "running",
+                      "succeeded",
+                      "failed",
+                      "cancelled",
+                      "waiting_input",
+                      "stopping",
+                      "lost"
+                    ]
+                  },
+                  "evidence_source": {
+                    "enum": [
+                      "runner_observed",
+                      "tool_reported",
+                      "server_derived"
+                    ]
+                  },
+                  "last_confirmed_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "phase": {
+                    "enum": [
+                      "implementing",
+                      "testing",
+                      "reviewing",
+                      "researching",
+                      "unknown"
+                    ]
+                  }
+                },
+                "required": [
+                  "run_id",
+                  "status",
+                  "evidence_source",
+                  "last_confirmed_at",
+                  "phase"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "external_report": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "working",
+                      "submitted",
+                      "blocked"
+                    ]
+                  },
+                  "reported_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "evidence_source": {
+                    "const": "user_reported"
+                  }
+                },
+                "required": [
+                  "status",
+                  "reported_at",
+                  "evidence_source"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pending_owner_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "request_cancel": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "request_cancel"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "member_id",
+          "display_name",
+          "role_label",
+          "execution_mode",
+          "connection_state",
+          "last_heartbeat_at",
+          "task",
+          "run",
+          "external_report",
+          "pending_owner_count",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 100
+    }
+  },
+  "required": [
+    "schema_version",
+    "is_demo",
+    "workspace_id",
+    "snapshot_sequence",
+    "captured_at",
+    "members"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pixel Office authorized read-only snapshot, not Runner events",
+  "description": "Presentation adapter output. No approvals, commands or task-state transitions may be inferred from this object. Relational authorization and referential validation are performed outside JSON Schema."
+}

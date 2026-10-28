@@ -1,0 +1,168 @@
+{
+  "schema_version": "1.1.0",
+  "all_statuses_are_planned": true,
+  "feature_flag": "pixel_office",
+  "scope": "frontend_presentation_addon",
+  "tasks": [
+    {
+      "id": "PX-01",
+      "title": "기존 앱·라우트·스토어 확인",
+      "priority": "P0",
+      "depends_on": [],
+      "status": "planned",
+      "acceptance": [
+        "기존 변경을 보존하고 구현 브랜치 범위를 기록",
+        "main #/office 유지",
+        "실제 member ID와 자리 seed_key 연결표 준비"
+      ]
+    },
+    {
+      "id": "PX-02",
+      "title": "같은 스토어에서 읽는 뷰 어댑터",
+      "priority": "P0",
+      "depends_on": [
+        "PX-01"
+      ],
+      "status": "planned",
+      "acceptance": [
+        "별도 업무 DB 없음",
+        "demo/live 분리",
+        "연결·출처·업무·실행 상태를 서로 덮어쓰지 않음"
+      ]
+    },
+    {
+      "id": "PX-03",
+      "title": "픽셀 사무실 lazy route와 접근 가능한 팀원 목록",
+      "priority": "P0",
+      "depends_on": [
+        "PX-01",
+        "PX-02"
+      ],
+      "status": "planned",
+      "acceptance": [
+        "#/office/room 직접 진입·뒤로가기",
+        "키보드로 모든 업무 접근 가능",
+        "렌더러 실패 시 목록 유지"
+      ]
+    },
+    {
+      "id": "PX-04",
+      "title": "타일·가구·캐릭터 독립 렌더링",
+      "priority": "P0",
+      "depends_on": [
+        "PX-03"
+      ],
+      "status": "planned",
+      "acceptance": [
+        "scene JSON 좌표 사용",
+        "오브젝트별 독립 클릭 영역",
+        "책상 앞·뒤 가림 처리",
+        "참고 이미지를 통째로 최종 UI에 사용하지 않음"
+      ]
+    },
+    {
+      "id": "PX-05",
+      "title": "실제 상태·드로어 연결",
+      "priority": "P0",
+      "depends_on": [
+        "PX-02",
+        "PX-04"
+      ],
+      "status": "planned",
+      "acceptance": [
+        "자리 클릭→팀원 상세",
+        "작업 상세·외부 결과 등록 연결",
+        "중지 요청은 기존 권한·확인 절차 사용",
+        "가짜 진행률·완료 생성 금지"
+      ]
+    },
+    {
+      "id": "PX-06",
+      "title": "픽셀 에셋 제작·교체",
+      "priority": "P0",
+      "depends_on": [
+        "PX-04"
+      ],
+      "status": "planned",
+      "acceptance": [
+        "manifest의 필수 에셋 생산",
+        "기본 캐릭터 5명 및 상태 프레임 일관성",
+        "한글 이름·상태는 DOM",
+        "실제 원본/권리 기록"
+      ]
+    },
+    {
+      "id": "PX-07",
+      "title": "실시간 회복·중복 처리·애니메이션 정책",
+      "priority": "P0",
+      "depends_on": [
+        "PX-05"
+      ],
+      "status": "planned",
+      "acceptance": [
+        "stale/offline 정적 표시",
+        "재접속 snapshot 갱신",
+        "역순 snapshot 거부",
+        "화면 전환 시 ticker·리스너 제거"
+      ]
+    },
+    {
+      "id": "PX-08",
+      "title": "반응형·접근성·회귀 시험",
+      "priority": "P0",
+      "depends_on": [
+        "PX-06",
+        "PX-07"
+      ],
+      "status": "planned",
+      "acceptance": [
+        "모바일 하단 패널",
+        "reduce motion",
+        "20회 진입/이탈 후 리소스 검사",
+        "기존 지시·승인·권한 회귀 통과"
+      ]
+    },
+    {
+      "id": "PX-09",
+      "title": "실제 실행 하나와 수동 보고 하나 연결 검수",
+      "priority": "P0",
+      "depends_on": [
+        "PX-08"
+      ],
+      "status": "planned",
+      "acceptance": [
+        "승인된 샘플 프로젝트에서 관리형 run 관찰",
+        "외부 사용자 보고는 수동으로 구별",
+        "dashboard/room 동일 task ID·상태 비교",
+        "실서비스 배포는 별도 승인"
+      ]
+    },
+    {
+      "id": "PX-LATER-01",
+      "title": "이동·사무실 배치 편집·실제 3D 회전",
+      "priority": "P2",
+      "depends_on": [
+        "PX-09"
+      ],
+      "status": "planned",
+      "acceptance": [
+        "별도 범위 승인 이후 설계",
+        "지금 구현에 물리엔진/경로탐색/게임경제 추가 금지"
+      ]
+    }
+  ],
+  "definition_of_done": [
+    "실제 앱에 통합",
+    "참고 분위기의 제작 완료 에셋",
+    "동일 업무 저장소 공유",
+    "관리형·수동 작업 구별",
+    "실제 연결 검수",
+    "사용자 확인"
+  ],
+  "not_done_by": [
+    "JSON 생성만",
+    "생성 이미지 위에 버튼만 부착",
+    "랜덤 상태 애니메이션",
+    "데모 자료를 실제 업무로 표시"
+  ]
+}
