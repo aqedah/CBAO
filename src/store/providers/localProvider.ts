@@ -4,7 +4,7 @@
  * - Runner 연결이 없으므로 관리형 실행은 생기지 않는다. 외부 작업의 사용자 직접 보고와 승인만 가능하다.
  * - 데모 fixture 를 절대 주입하지 않는다.
  */
-import type { Workspace } from '../../domain/types';
+import type { Member, Workspace } from '../../domain/types';
 import { applyCommand, type Command } from '../commands';
 import type { WorkspaceProvider } from './types';
 
@@ -22,13 +22,28 @@ export function emptyLocalWorkspace(nowIso: string): Workspace {
   };
 }
 
+/**
+ * 소유자가 지시한 초기 팀원 (2026-10-28): Gemini 와 NotebookLM 을 서로 다른 외부 작업 팀원으로 등록하고 각 자리에 연결한다.
+ * 외부 작업이므로 Runner·heartbeat 가 없고, 상태는 사용자 직접 보고로만 바뀐다. 데모 fixture 가 아니다.
+ * 이미 저장된 로컬 workspace 에는 적용하지 않는다 (처음 만들 때만).
+ */
+export const INITIAL_MEMBERS: Member[] = [
+  { member_id: 'm-gemini', display_name: 'Gemini', role_label: '자료·이미지', execution_mode: 'external', tool_label: 'Gemini 웹', connection_state: 'unknown', last_heartbeat_at: null, capabilities: { request_cancel: false } },
+  { member_id: 'm-notebooklm', display_name: 'NotebookLM', role_label: '출처·문서 정리', execution_mode: 'external', tool_label: 'NotebookLM 웹', connection_state: 'unknown', last_heartbeat_at: null, capabilities: { request_cancel: false } },
+];
+
+export function initialLocalWorkspace(nowIso: string): Workspace {
+  const ws = emptyLocalWorkspace(nowIso);
+  return { ...ws, revision: 1, members: [...INITIAL_MEMBERS], ui: { ...ws.ui, seat_bindings: { gemini: 'm-gemini', notebooklm: 'm-notebooklm' } } };
+}
+
 interface StorageLike { getItem(k: string): string | null; setItem(k: string, v: string): void }
 
 function readStorage(storage: StorageLike | null, nowIso: string): Workspace {
-  if (!storage) return emptyLocalWorkspace(nowIso);
+  if (!storage) return initialLocalWorkspace(nowIso);
   try {
     const raw = storage.getItem(LOCAL_STORAGE_KEY);
-    if (!raw) return emptyLocalWorkspace(nowIso);
+    if (!raw) return initialLocalWorkspace(nowIso);
     const parsed = JSON.parse(raw) as Workspace;
     if (parsed.is_demo) throw new Error('로컬 저장소에 데모 데이터가 섞여 있습니다. 초기화가 필요합니다.');
     if (parsed.workspace_id !== 'local-workspace' || !Number.isInteger(parsed.revision)) return emptyLocalWorkspace(nowIso);

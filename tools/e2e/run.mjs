@@ -61,7 +61,8 @@ async function main() {
       // AT-03 미연결 자리 (로컬 모드에는 팀원이 없음)
       const unbound = await page.locator('.member-list .ml-name', { hasText: '미연결' }).count();
       const seatNote = await page.locator('.drawer').count();
-      record('AT-03', '미연결 자리는 명시적으로 미연결 표시', unbound === 5 && seatNote === 0, `미연결 ${unbound}/5`);
+      const seeded = await page.locator('.member-list .ml-state', { hasText: '외부 서비스 · 상태 미확인' }).count();
+      record('AT-03', '미연결 자리(GPT·Claude·Codex)는 미연결, 초기 등록된 Gemini·NotebookLM 은 외부 작업·상태 미확인', unbound === 3 && seeded === 2 && seatNote === 0, `미연결 ${unbound}/5, 외부 ${seeded}`);
       await shot(page, 'at03-room-local-unbound');
       await page.click('.member-list button >> nth=0'); await sleep(300);
       record('AT-03b', '미연결 자리 클릭 → 설정 안내 드로어', (await page.locator('.drawer >> text=팀원·자리 설정').count()) > 0);
@@ -237,12 +238,13 @@ async function main() {
       await page.goto(`${BASE}/#/projects`, { waitUntil: 'networkidle' }); await sleep(300);
       await page.fill('form.stack input >> nth=0', 'CBSR'); await page.click('form.stack button[type=submit]'); await sleep(300);
       await page.goto(`${BASE}/#/settings/team`); await sleep(300);
-      await page.fill('form.stack input >> nth=0', 'Gemini'); await page.fill('form.stack input >> nth=1', '자료·이미지');
+      await page.fill('form.stack input >> nth=0', 'GPT'); await page.fill('form.stack input >> nth=1', '연구·설계·검수');
       await page.selectOption('form.stack select', 'external'); await page.click('form.stack button[type=submit]'); await sleep(300);
-      const memberId = await page.evaluate(() => JSON.parse(localStorage.getItem('ai-office.local-workspace.v1')).members[0].member_id);
-      await page.selectOption('select[aria-label="Gemini 자리에 연결할 팀원"]', memberId); await sleep(300);
-      const other = await page.locator('select[aria-label="GPT 자리에 연결할 팀원"] option[disabled]').count();
-      record('AT-03c', '자리 바인딩은 member_id 로, 한 팀원을 두 자리에 복제 불가', other === 1);
+      const ids = await page.evaluate(() => JSON.parse(localStorage.getItem('ai-office.local-workspace.v1')).members.map(m => m.member_id));
+      const memberId = ids[0]; // 초기 등록된 m-gemini
+      await page.selectOption('select[aria-label="GPT 자리에 연결할 팀원"]', ids[2]); await sleep(300);
+      const other = await page.locator('select[aria-label="Claude 자리에 연결할 팀원"] option[disabled]').count();
+      record('AT-03c', '자리 바인딩은 member_id 로, 이미 자리에 있는 팀원(3명)은 다른 자리에서 선택 불가', ids.length === 3 && other === 3);
       await shot(page, 'at25-team-binding');
       // AT-09 새 지시: 프로젝트·담당 미리 채움, 저장해도 실행 없음
       await page.goto(`${BASE}/#/office/room`); await waitRoom(page);

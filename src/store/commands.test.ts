@@ -86,12 +86,15 @@ describe('local provider storage boundary', () => {
     api.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ ...buildDemoWorkspace(T0) }));
     await expect(createLocalProvider(api, () => new Date(T0)).load()).rejects.toThrow(/데모/);
   });
-  test('persists commands and starts empty without fixtures', async () => {
+  test('starts with the owner-registered external members (Gemini, NotebookLM) and no fixtures', async () => {
     const storage = new Map<string, string>();
     const api = { getItem: (k: string) => storage.get(k) ?? null, setItem: (k: string, v: string) => { storage.set(k, v); } };
     const p = createLocalProvider(api, () => new Date(T0));
     const ws = await p.load();
-    expect(ws.members).toHaveLength(0);
+    expect(ws.members.map(m => m.display_name)).toEqual(['Gemini', 'NotebookLM']);
+    expect(ws.members.every(m => m.execution_mode === 'external' && m.last_heartbeat_at === null)).toBe(true);
+    expect(ws.ui.seat_bindings).toEqual({ gemini: 'm-gemini', notebooklm: 'm-notebooklm' });
+    expect(ws.tasks).toHaveLength(0); expect(ws.runs).toHaveLength(0); expect(ws.devices).toHaveLength(0);
     expect(ws.is_demo).toBe(false);
     await p.command({ type: 'register_project', name: 'CBSR', purpose: '', repo_reference: null, idempotency_key: 'p1' });
     expect(JSON.parse(storage.get(LOCAL_STORAGE_KEY)!).projects).toHaveLength(1);

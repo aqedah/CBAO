@@ -1,5 +1,5 @@
 {
-  "ran_at": "2026-10-28T02:15:13.310Z",
+  "ran_at": "2026-10-28T02:57:09.537Z",
   "environment": "node v22.23.4, playwright 1.63.0, headless chromium (swiftshader)",
   "pass": 28,
   "fail": 0,
@@ -18,9 +18,9 @@
     },
     {
       "id": "AT-03",
-      "name": "미연결 자리는 명시적으로 미연결 표시",
+      "name": "미연결 자리(GPT·Claude·Codex)는 미연결, 초기 등록된 Gemini·NotebookLM 은 외부 작업·상태 미확인",
       "pass": true,
-      "detail": "미연결 5/5"
+      "detail": "미연결 3/5, 외부 2"
     },
     {
       "id": "AT-03b",
@@ -44,7 +44,7 @@
       "id": "AT-10",
       "name": "Runner 확인 실행(Claude)만 typing 동작, 외부 보고(Gemini)는 정지",
       "pass": true,
-      "detail": "claude 5→3, gemini still"
+      "detail": "claude 4→3, gemini still"
     },
     {
       "id": "AT-11",
@@ -138,7 +138,7 @@
     },
     {
       "id": "AT-03c",
-      "name": "자리 바인딩은 member_id 로, 한 팀원을 두 자리에 복제 불가",
+      "name": "자리 바인딩은 member_id 로, 이미 자리에 있는 팀원(3명)은 다른 자리에서 선택 불가",
       "pass": true,
       "detail": ""
     },
