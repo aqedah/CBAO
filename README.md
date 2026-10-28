@@ -1,4 +1,4 @@
-# AI Office (CBAO — Central Bible AI Office)
+# 바이브코딩인력사무소 (CBAO — Central Bible AI Office)
 
 배포 주소: https://aqedah.github.io/CBAO/ (GitHub Pages, `main` 기준)
 

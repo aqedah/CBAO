@@ -66,7 +66,7 @@ export default function App() {
   return (
     <div className="app">
       <nav className="app-nav" aria-label="주 메뉴">
-        <div className="brand">AI OFFICE</div>
+        <div className="brand">바이브코딩인력사무소</div>
         <NavLink to="/office" current={is('/office')}>사무실</NavLink>
         <NavLink to="/projects" current={is('/projects')}>프로젝트</NavLink>
         <NavLink to="/tasks" current={is('/tasks')}>작업함</NavLink>

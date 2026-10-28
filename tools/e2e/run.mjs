@@ -31,7 +31,9 @@ async function newPage(browser, { width = 1366, height = 768, demo = false, redu
   page.errors = [];
   page.on('pageerror', e => page.errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') page.errors.push(m.text()); });
+  // headless 에서는 구글 로그인이 불가하므로 Firebase 대신 로컬 모드로 고정한다. Firebase 모드는 수동 검수.
   if (demo) await page.addInitScript(() => { try { sessionStorage.setItem('ai-office.demo-session', '1'); } catch {} });
+  else await page.addInitScript(() => { try { localStorage.setItem('ai-office.data-source', 'local'); } catch {} });
   if (init) await page.addInitScript(init);
   return page;
 }
@@ -48,7 +50,7 @@ async function main() {
       const page = await newPage(browser);
       await page.goto(`${BASE}/#/`, { waitUntil: 'networkidle' });
       await sleep(500);
-      record('AT-01', '기본 진입은 대시보드(#/office)', page.url().endsWith('#/office') && await page.locator('h1', { hasText: '사무실' }).count() > 0, page.url());
+      record('AT-01', '기본 진입은 대시보드(#/office)', page.url().endsWith('#/office') && await page.locator('h1', { hasText: '인력사무소' }).count() > 0, page.url());
       await shot(page, 'at01-dashboard-local-empty');
       // AT-02 보기 전환 / 직접 링크 / 뒤로가기
       await page.click('.view-switch >> text=픽셀 사무실');

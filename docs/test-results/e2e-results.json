@@ -1,5 +1,5 @@
 {
-  "ran_at": "2026-10-28T03:41:53.428Z",
+  "ran_at": "2026-10-28T08:01:12.524Z",
   "environment": "node v22.23.4, playwright 1.63.0, headless chromium (swiftshader)",
   "pass": 28,
   "fail": 0,
@@ -44,7 +44,7 @@
       "id": "AT-10",
       "name": "Runner 확인 실행(Claude)만 typing 동작, 외부 보고(Gemini)는 정지",
       "pass": true,
-      "detail": "claude 5→3, gemini still"
+      "detail": "claude 4→3, gemini still"
     },
     {
       "id": "AT-11",

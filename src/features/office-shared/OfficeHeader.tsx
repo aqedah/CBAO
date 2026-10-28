@@ -12,7 +12,7 @@ export function OfficeHeader({ view }: { view: 'dashboard' | 'room' }) {
   return (
     <header>
       <div className="page-head">
-        <h1>사무실</h1>
+        <h1>인력사무소</h1>
         <div className="view-switch" role="group" aria-label="보기 전환">
           <a href={href('/office', { project })} aria-current={view === 'dashboard' ? 'page' : undefined}>대시보드</a>
           <a href={href('/office/room', { project })} aria-current={view === 'room' ? 'page' : undefined}>픽셀 사무실</a>
