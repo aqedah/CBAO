@@ -141,3 +141,15 @@ e2e 가 확인한 핵심: 대시보드와 자리 드로어가 같은 task ID(`DE
 3. **Gemini/NotebookLM 자리**: 소유자 결정(2026-10-28)으로 두 팀원을 **별도 외부 작업 팀원**(`m-gemini`, `m-notebooklm`)으로 로컬 workspace 초기값에 등록하고 각 자리에 연결했다. 이미 저장된 로컬 데이터에는 적용되지 않으며, 설정 → 팀원·자리에서 바꿀 수 있다. 캡처 `local-initial-members.png`.
 4. **에셋 완성도**: 코드로 그린 1차 제작본이다. 정식 도트 아티스트 에셋으로 교체하려면 같은 프레임명·anchor 로 아틀라스만 바꾸면 된다.
 5. **데모 진입 방식**: 지금은 설정 → 연결에서 "데모 켜기"(세션 한정). URL 로 데모를 여는 기능은 live 혼입 위험 때문에 넣지 않았다.
+
+
+## 2026-10-28 (저녁) — 프로젝트별 가지 흐름 · Runner 0.7.0
+**문제 (CBSR 대화에서 발견):** Runner 가 Claude 에 허용한 명령이 `git status/diff/log`·테스트 명령뿐이라 `git show`·`git ls-tree`·`node` 가 전부 '승인 대기'로 막혔고, 작업 폴더는 main(빌드 결과물)이라 CBSR 규칙(원본은 source 가지)과 어긋났다. 결과: 원인은 찾았지만 고치지 못함.
+
+**해결:**
+- 프로젝트 설정에 작업 가지 / 빌드 명령 / 배포 폴더 → 배포 가지 추가 (`Project.work_branch|build_command|deploy_dir|deploy_branch`, `update_project` 검증).
+- Runner: 작업 가지로 clone·checkout·pull, 다른 가지의 올리지 않은 변경은 stash 보관 후 알림. 반영 = 작업 가지 커밋·push → 빌드 → 배포 폴더를 임시 worktree 로 배포 가지에 커밋·push (배포 폴더는 작업 가지 커밋에서 제외). 작업 카드 '올리기' 도 작업 가지 기준.
+- Claude 허용 명령 확대 (git 읽기 명령, node/python/npx/pip, ls/cat/head/tail/find). 커밋·push·가지 바꾸기는 여전히 AI 금지, 프롬프트에도 명시 (저장소 CLAUDE.md 가 '커밋하라' 해도 Runner 규칙 우선).
+- 대화 화면 반영 버튼이 `source → 빌드 → main` 식으로 흐름을 보여 준다.
+
+**검증:** vitest 51 통과, tsc·build 통과. 모의 저장소(source/main 두 가지, 작은 build_site.py)로 Runner 메서드 직접 실행: main→source 전환, 더러운 main 은 stash, source 커밋에 app/site 제외, 빌드 후 main 에 결과만 커밋, worktree 정리 확인 (실제 연결 아님 · 리눅스 시뮬레이션). 윈도우 실동작은 소유자 PC 에서 확인 필요.
