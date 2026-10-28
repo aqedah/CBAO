@@ -21,6 +21,7 @@ export type Command =
   | { type: 'update_ui'; patch: Partial<UiSettings> }
   | { type: 'mark_task_status'; task_id: string; status: Task['status']; expected_revision: number }
   | { type: 'request_run'; task_id: string; expected_revision: number; idempotency_key: string }
+  | { type: 'request_publish'; task_id: string; idempotency_key: string }
   | { type: 'demo_refresh' };
 
 export class CommandError extends Error {
@@ -202,6 +203,15 @@ export function applyCommand(ws: Workspace, cmd: Command, nowIso: string): Works
       if (task.run_requested_at) return ws;
       // 실행 요청만 기록한다. 실제 실행 시작·상태 변경은 Runner 가 PC당 1개 규칙으로 처리한다.
       return bump({ ...ws, tasks: ws.tasks.map(t => t.task_id === task.task_id ? { ...t, run_requested_at: nowIso, updated_at: nowIso } : t) }, nowIso);
+    }
+    case 'request_publish': {
+      const task = ws.tasks.find(t => t.task_id === cmd.task_id);
+      if (!task) throw new CommandError('작업이 없습니다.', 'not_found');
+      if (task.status !== 'done') throw new CommandError('승인(완료)된 작업만 올릴 수 있습니다.', 'forbidden');
+      const project = ws.projects.find(p => p.project_id === task.project_id);
+      if (!project?.repo_reference) throw new CommandError('프로젝트에 저장소 참조가 없습니다.', 'invalid');
+      if (task.publish_requested_at && task.publish?.status !== 'failed') return ws;
+      return bump({ ...ws, tasks: ws.tasks.map(t => t.task_id === task.task_id ? { ...t, publish_requested_at: nowIso, publish: { status: 'pending', branch: null, compare_url: null, message: 'Runner 대기', at: nowIso } } : t) }, nowIso);
     }
     case 'demo_refresh': {
       if (!ws.is_demo) throw new CommandError('데모 모드에서만 가능합니다.', 'forbidden');

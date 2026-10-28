@@ -39,7 +39,7 @@ KEY_PATH = BASE / "serviceAccount.json"
 RUNS_DIR = BASE / "runs"
 PROJECTS_DIR = BASE / "projects"
 ACTIVE_RUN = {"queued", "leased", "starting", "running", "waiting_input", "stopping"}
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 
 
 def now_iso() -> str:
@@ -437,8 +437,37 @@ class Runner:
                     r = subprocess.run([git, "clone", url, str(p)], capture_output=True, timeout=600)
                     if r.returncode != 0:
                         log("내려받기 실패: " + (r.stderr or r.stdout).decode("utf-8", errors="replace")[-400:])
+                    else:
+                        self._git_setup(p)
             p.mkdir(parents=True, exist_ok=True)
+        self._git_refresh(p)
         return p
+
+    @staticmethod
+    def _git(cwd: Path, *args, timeout=120):
+        git = which("git")
+        if not git:
+            return 127, "git not installed"
+        r = subprocess.run([git, *args], cwd=str(cwd), capture_output=True, timeout=timeout)
+        return r.returncode, (r.stdout + r.stderr).decode("utf-8", errors="replace").strip()
+
+    def _git_setup(self, p: Path):
+        # 윈도우 CRLF 를 저장소에는 LF 로, 커밋 작성자는 Runner 로 (push 권한은 PC 의 GitHub 로그인에 따른다)
+        self._git(p, "config", "core.autocrlf", "true")
+        self._git(p, "config", "user.name", "CBAO Runner")
+        self._git(p, "config", "user.email", "cbao-runner@users.noreply.github.com")
+
+    def _git_refresh(self, p: Path):
+        """실행 전 main 을 최신으로. 올리지 않은 변경이 있으면 건드리지 않는다."""
+        if not (p / ".git").exists():
+            return
+        code, out = self._git(p, "status", "--porcelain")
+        if code != 0 or out:
+            return  # 아직 올리지 않은 변경이 남아 있음 → 그대로 둔다
+        code, branch = self._git(p, "rev-parse", "--abbrev-ref", "HEAD")
+        if code == 0 and branch not in ("main", "master"):
+            self._git(p, "checkout", "main")
+        self._git(p, "pull", "--ff-only", timeout=300)
 
     def start_run(self, task: dict, tool_key: str):
         cfg = self.cfg
@@ -565,6 +594,57 @@ class Runner:
         log(f"실행 종료 {run_id}: {status} (exit {rp.exit_code})")
         self.active = self.active_run_id = self.active_task_id = self.active_member_id = self.active_tool_key = None
 
+    # ----- GitHub 에 올리기 (소유자 요청 시에만, 검토용 브랜치)
+    def handle_publish(self, ws: dict):
+        for t in ws.get("tasks", []):
+            if not t.get("publish_requested_at") or (t.get("publish") or {}).get("status") != "pending":
+                continue
+            if t.get("status") != "done":
+                continue
+            pub_result = self._publish(t, ws)
+            tid = t["task_id"]
+
+            def fn(w: dict, result=pub_result, tid=tid) -> bool:
+                task = next((x for x in w.get("tasks", []) if x.get("task_id") == tid), None)
+                if not task:
+                    return False
+                task["publish"] = result
+                return True
+
+            self.ledger.mutate(fn)
+            log(f"올리기 {tid}: {pub_result['status']} {pub_result['message']}")
+
+    def _publish(self, task: dict, ws: dict) -> dict:
+        now = now_iso()
+        proj = next((p for p in ws.get("projects", []) if p.get("project_id") == task.get("project_id")), None) or {}
+        repo = str(proj.get("repo_reference") or "").strip()
+        pdir = self.project_dir(task["project_id"], ws)
+        if not which("git"):
+            return {"status": "failed", "branch": None, "compare_url": None, "message": "git 이 설치되어 있지 않습니다.", "at": now}
+        if not (pdir / ".git").exists():
+            return {"status": "failed", "branch": None, "compare_url": None, "message": f"{pdir} 는 git 저장소가 아닙니다.", "at": now}
+        safe_id = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in task["task_id"]).lower()
+        branch = f"cbao/{safe_id}"
+        code, out = self._git(pdir, "status", "--porcelain")
+        if code != 0:
+            return {"status": "failed", "branch": None, "compare_url": None, "message": out[-300:], "at": now}
+        if not out:
+            return {"status": "nothing_to_publish", "branch": None, "compare_url": None, "message": "변경된 파일이 없습니다.", "at": now}
+        for args in (("checkout", "-B", branch), ("add", "-A"), ("commit", "-m", f"{task.get('title')} (CBAO {task['task_id']}, 소유자 승인)")):
+            code, out = self._git(pdir, *args)
+            if code != 0:
+                return {"status": "failed", "branch": branch, "compare_url": None, "message": f"git {args[0]} 실패: {out[-300:]}", "at": now}
+        code, out = self._git(pdir, "push", "-u", "origin", branch, timeout=600)
+        if code != 0:
+            return {"status": "failed", "branch": branch, "compare_url": None, "message": f"push 실패 (GitHub 로그인 필요할 수 있음): {out[-300:]}", "at": now}
+        # 다음 작업을 위해 main 으로 복귀 (브랜치는 원격에 보존)
+        self._git(pdir, "checkout", "main")
+        compare = None
+        m = repo if not repo.startswith("http") else repo.replace("https://github.com/", "").removesuffix(".git")
+        if m and "/" in m:
+            compare = f"https://github.com/{m}/compare/main...{branch}?expand=1"
+        return {"status": "pushed", "branch": branch, "compare_url": compare, "message": "검토용 브랜치에 올렸습니다. GitHub 에서 합치기(PR)를 만드세요.", "at": now}
+
     # ----- 종료 시 오프라인 표시
     def mark_offline(self):
         cfg = self.cfg
@@ -593,6 +673,7 @@ class Runner:
                     self.register_and_heartbeat()
                     ws = self.ledger.read()
                     self.check_active(ws)
+                    self.handle_publish(ws)
                     if self.active is None:
                         picked = self.pick_task(ws)
                         if picked:

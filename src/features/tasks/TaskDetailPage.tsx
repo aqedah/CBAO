@@ -24,6 +24,13 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
     try { await getStore().command({ type: 'request_run', task_id: task.task_id, expected_revision: task.revision, idempotency_key: newIdempotencyKey() }); setMsg('실행 요청을 기록했습니다. Runner 가 받아가면 실행 기록이 생깁니다.'); }
     catch (e) { setMsg(e instanceof CommandError ? e.message : '요청 실패'); }
   };
+  const project = ws.projects.find(p => p.project_id === task.project_id);
+  const canPublish = task.status === 'done' && !!project?.repo_reference && runs.length > 0;
+  const requestPublish = async () => {
+    if (!window.confirm(`승인된 변경을 GitHub 저장소(${project?.repo_reference})의 검토용 브랜치에 올릴까요? 실제 사이트 반영(main 합치기)은 GitHub에서 따로 눌러야 합니다.`)) return;
+    try { await getStore().command({ type: 'request_publish', task_id: task.task_id, idempotency_key: newIdempotencyKey() }); setMsg('올리기 요청을 기록했습니다. Runner 가 처리하면 아래에 링크가 생깁니다.'); }
+    catch (e) { setMsg(e instanceof CommandError ? e.message : '요청 실패'); }
+  };
   const activeRun = runs.find(r => ['queued', 'leased', 'starting', 'running', 'waiting_input', 'stopping'].includes(r.status));
   const canRequestRun = member && (member.execution_mode === 'managed' || member.execution_mode === 'observed') && ['ready', 'needs_changes'].includes(task.status) && !activeRun;
   const requestCancel = async (runId: string) => {
@@ -45,6 +52,15 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
           : <button className="btn primary" type="button" onClick={() => void requestRun()}>실행 요청</button>)}
       </div>
       {msg && <div className="notice" role="status">{msg}</div>}
+      {canPublish && (
+        <div className="notice info">
+          {!task.publish || task.publish.status === 'failed' ? (
+            <>{task.publish?.status === 'failed' && <div className="meta">이전 시도 실패: {task.publish.message}</div>}<button className="btn primary" type="button" onClick={() => void requestPublish()}>GitHub에 올리기 (검토용 브랜치)</button></>
+          ) : task.publish.status === 'pending' ? '올리기 요청됨 · Runner 처리 대기' : task.publish.status === 'nothing_to_publish' ? '올릴 변경이 없습니다 (파일이 바뀌지 않음)' : (
+            <>브랜치 <code>{task.publish.branch}</code> 에 올렸습니다 ({formatTime(task.publish.at)}). {task.publish.compare_url && <ExternalLink href={task.publish.compare_url}>GitHub에서 합치기(PR) 열기</ExternalLink>}</>
+          )}
+        </div>
+      )}
       <div className="grid-2">
         <section className="card">
           <h2>지시</h2>

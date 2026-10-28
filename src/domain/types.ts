@@ -51,6 +51,9 @@ export interface Task {
   sequence: number;
   /** 소유자가 '실행 요청'을 누른 시각. 이 값이 있어야 Runner 가 받아간다. 저장만으로는 실행되지 않는다. */
   run_requested_at?: string | null;
+  /** 소유자가 'GitHub에 올리기'를 누른 시각. Runner 가 검토용 브랜치에 push 한다. main 직접 반영은 하지 않는다. */
+  publish_requested_at?: string | null;
+  publish?: { status: 'pending' | 'pushed' | 'failed' | 'nothing_to_publish'; branch: string | null; compare_url: string | null; message: string; at: string } | null;
 }
 
 export interface Run {
