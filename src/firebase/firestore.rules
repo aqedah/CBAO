@@ -22,6 +22,11 @@ service cloud.firestore {
       match /threads/{threadId} {
         allow read, create, update: if isOwner() && request.auth.uid == uid;
         allow delete: if isOwner() && request.auth.uid == uid;
+        // 메시지 원본 (schema 2: 대화방 문서 크기 제한을 피해 메시지마다 문서 하나). 삭제는 하지 않는다.
+        match /messages/{messageId} {
+          allow read, create, update: if isOwner() && request.auth.uid == uid;
+          allow delete: if false;
+        }
       }
     }
     // 그 밖의 모든 경로는 차단 (Runner 이벤트 등은 다음 단계에서 별도 규칙으로 연다)

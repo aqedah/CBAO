@@ -4,6 +4,8 @@ import { Badge, StateIcon, formatAge, formatTime, useServerNow } from '../../sha
 import { EVIDENCE_LABEL, EXEC_MODE_LABEL, TASK_STATUS_LABEL } from '../../domain/types';
 import { OfficeHeader } from '../office-shared/OfficeHeader';
 import { useMemberViews, useOfficeSnapshot, useProjectFilter } from '../office-shared/useOfficeSnapshot';
+import { useThreads } from '../../store/threadStore';
+import { currentSection } from '../chat/ChatPage';
 
 /** S10 메인 대시보드. 우선순위: 사용자 결정 → 팀원 현황 → 진행 작업 → 최근 결과. */
 export function DashboardPage() {
@@ -13,6 +15,8 @@ export function DashboardPage() {
   const views = useMemberViews(snapshot, { reducedMotion: true, hidden: true, motionEnabled: false });
   const project = useProjectFilter();
   const now = useServerNow();
+  const source = useStoreState(s => s.source);
+  const { threads } = useThreads();
 
   if (!ws) {
     return (
@@ -30,9 +34,45 @@ export function DashboardPage() {
   const recent = ws.artifacts.filter(a => { const t = ws.tasks.find(x => x.task_id === a.task_id); return t && inProject(t.project_id); }).slice(-5).reverse();
   const device = ws.devices[0];
 
+  const recentThreads = threads.filter(t => inProject(t.project_id)).slice(0, 3);
+  const roadmaps = ws.projects.filter(p => !p.archived && inProject(p.project_id) && p.roadmap_path);
   return (
     <>
       <OfficeHeader view="dashboard" />
+      {source === 'firebase' && (
+        <section className="card" aria-labelledby="h-continue">
+          <h2 id="h-continue">이어서 하기</h2>
+          {recentThreads.length === 0 ? <p className="empty">최근 대화가 없습니다. <a href={href('/chat')}>새 대화</a></p> : (
+            <ul className="list">
+              {recentThreads.map(t => {
+                const dirty = (t.sync?.dirty_paths?.length ?? 0) > 0;
+                return (
+                  <li key={t.thread_id}>
+                    <div className="row"><strong>{ws.projects.find(p => p.project_id === t.project_id)?.name ?? t.project_id}</strong> / {t.title}
+                      {t.status !== 'idle' && <Badge tone="active">{t.status === 'running' ? '실행 중' : '대기'}</Badge>}
+                      {t.needs_owner && <Badge tone="attention">내 판단 필요</Badge>}
+                      {dirty && <Badge tone="attention">앱에서 수정 · 커밋 안 됨</Badge>}</div>
+                    <div className="meta">{t.last_message ? `${t.last_message.role === 'owner' ? '나' : t.last_message.role === 'system' ? '사무실' : '팀원'}: ${t.last_message.text}` : '메시지 없음'}</div>
+                    <div className="meta">버전 {t.sync?.head_sha ? t.sync.head_sha.slice(0, 7) : '없음'}{t.sync?.remote === 'synced' ? ' · 원격과 같음' : t.checkpoints?.length ? ' · 이 PC 에만' : ''} · {formatAge(t.updated_at, now)}</div>
+                    <a className="btn small primary" href={href(`/chat/${t.thread_id}`)} style={{ marginTop: 6 }}>이어서 대화</a>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      )}
+      {roadmaps.length > 0 && (
+        <section className="card" aria-labelledby="h-roadmap">
+          <h2 id="h-roadmap">프로젝트 로드맵</h2>
+          <ul className="list">
+            {roadmaps.map(p => {
+              const rm = p.roadmap;
+              return <li key={p.project_id}><div className="row"><strong>{p.name}</strong> <span className="meta">{!rm ? '아직 안 읽음' : rm.parse_status === 'parsed' ? `현재 단계: ${currentSection(rm.sections)} · ${rm.done_count ?? 0}/${rm.item_count ?? 0} 완료 표시 · 근거 ${rm.source_commit?.slice(0, 7) ?? '?'}` : rm.parse_status === 'missing' ? '파일 없음' : '구조 미확정(원문만)'}</span><span className="spacer" /><a className="btn small" href={href(`/projects/${p.project_id}`)}>로드맵</a></div></li>;
+            })}
+          </ul>
+        </section>
+      )}
       <div className="card">
         <h2>연결</h2>
         {device ? (

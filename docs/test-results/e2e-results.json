@@ -1,7 +1,7 @@
 {
-  "ran_at": "2026-10-28T10:16:40.949Z",
+  "ran_at": "2026-10-28T14:05:23.534Z",
   "environment": "node v22.23.4, playwright 1.63.0, headless chromium (swiftshader)",
-  "pass": 28,
+  "pass": 31,
   "fail": 0,
   "results": [
     {
@@ -135,6 +135,24 @@
       "name": "WebGL 없는 브라우저: Pixi canvas renderer 로 fallback (또는 오류 안내)",
       "pass": true,
       "detail": "renderer=canvas"
+    },
+    {
+      "id": "V2-ROADMAP-UI",
+      "name": "프로젝트 개요 화면: 로드맵 미연결을 빈 계획으로 꾸미지 않고 \"연결 안 됨\"으로 표시",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "V2-POLICY-UI",
+      "name": "정책 화면: Runner 미연결이면 허용 목록을 꾸며 내지 않고 미확인으로 표시",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "id": "V2-CHAT-GATE",
+      "name": "대화방은 로컬 모드에서 열리지 않고 Firebase 전용임을 명시",
+      "pass": true,
+      "detail": ""
     },
     {
       "id": "AT-03c",

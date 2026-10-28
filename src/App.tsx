@@ -11,6 +11,7 @@ import { NewTaskPage } from './features/tasks/NewTaskPage';
 import { ApprovalsPage } from './features/approvals/ApprovalsPage';
 import { RecordsPage } from './features/records/RecordsPage';
 import { ProjectsPage } from './features/projects/ProjectsPage';
+import { ProjectDetailPage } from './features/projects/ProjectDetailPage';
 import { ConnectionsPage } from './features/settings/ConnectionsPage';
 import { TeamPage } from './features/settings/TeamPage';
 import { PoliciesPage } from './features/settings/PoliciesPage';
@@ -55,6 +56,7 @@ export default function App() {
   else if (path === '/chat') page = <ChatPage threadId={null} />;
   else if ((params = match('/chat/:id', path))) page = <ChatPage threadId={params.id} />;
   else if (path === '/projects') page = <ProjectsPage />;
+  else if ((params = match('/projects/:id', path))) page = <ProjectDetailPage projectId={params.id} />;
   else if (path === '/tasks') page = <TasksPage />;
   else if (path === '/tasks/new') page = <NewTaskPage />;
   else if ((params = match('/tasks/:id/external-report', path))) page = <ExternalReportPage taskId={params.id} />;

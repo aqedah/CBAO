@@ -30,6 +30,35 @@ export interface Project {
   deploy_dir?: string | null;
   /** 결과물을 올릴 가지. 비우면 main */
   deploy_branch?: string | null;
+  /** 기존 로드맵 문서 경로 (저장소 안, 예: docs/ROADMAP.md). Runner 가 읽기 전용으로 가져온다 */
+  roadmap_path?: string | null;
+  /** Runner 가 읽어 온 로드맵 (읽기 모델. 원본은 저장소 파일) */
+  roadmap?: RoadmapView | null;
+}
+
+export interface RoadmapItem { text: string; status: 'done' | 'todo' | 'listed' }
+export interface RoadmapView {
+  path: string;
+  blob_sha?: string | null;
+  source_commit?: string;
+  parse_status: 'parsed' | 'raw_only' | 'missing';
+  sections: Array<{ title: string; level: number; items: RoadmapItem[] }>;
+  raw_head?: string;
+  item_count?: number;
+  done_count?: number;
+  content_hash?: string;
+  checked_at?: string;
+  error?: string;
+}
+
+/** Runner 가 heartbeat 에 실어 보내는 실제 실행 정책 (정책 화면은 이것을 그대로 보여 준다) */
+export interface RunnerPolicy {
+  revision: number;
+  runner_version?: string;
+  reported_at?: string;
+  tools: Record<string, { discuss: string[]; exec: string[]; enforced_by: string; installed?: boolean; capabilities: Record<string, 'supported' | 'unsupported' | 'unverified'> }>;
+  rules: string[];
+  protected_paths: string[];
 }
 
 export interface Member {
@@ -139,6 +168,10 @@ export interface RunnerDevice {
   /** 기본 PC당 관리형 실행 1개. 사무실 그림 때문에 바꾸지 않는다. */
   max_concurrent_managed_runs: number;
   tools: Array<{ tool: string; status: 'not_installed' | 'installed' | 'logged_in' | 'test_passed' | 'connected' }>;
+  runner_version?: string;
+  workspace_uid?: string;
+  worktrees_root?: string;
+  policy?: RunnerPolicy | null;
 }
 
 /** 사용자별 UI 설정. 서버 권한을 대체하지 않는다. */

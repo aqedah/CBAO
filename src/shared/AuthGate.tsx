@@ -55,6 +55,6 @@ export function AuthStatusInline() {
   const source = useStoreState(s => s.source);
   if (source !== 'firebase') return null;
   return auth.signedIn
-    ? <span>로그인: {auth.email} <button type="button" className="btn small" onClick={() => void signOut().then(() => getStore().load())}>로그아웃</button></span>
+    ? <span>로그인: {auth.email} · 장부 UID <code title="심부름꾼 config.json 의 workspace_uid 에 적는 값">{auth.uid}</code> <button type="button" className="btn small" onClick={() => void signOut().then(() => getStore().load())}>로그아웃</button></span>
     : <span>로그인 안 됨</span>;
 }

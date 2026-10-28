@@ -32,14 +32,18 @@ import time
 import uuid
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import cbao_v2 as v2  # noqa: E402
+
 BASE = Path(__file__).resolve().parent.parent
 RUNNER_DIR = BASE / "runner"
 CONFIG_PATH = RUNNER_DIR / "config.json"
 KEY_PATH = BASE / "serviceAccount.json"
 RUNS_DIR = BASE / "runs"
 PROJECTS_DIR = BASE / "projects"
+WORKTREES_DIR = BASE / "worktrees"
 ACTIVE_RUN = {"queued", "leased", "starting", "running", "waiting_input", "stopping"}
-VERSION = "0.7.0"
+VERSION = "0.8.0"
 
 
 def now_iso() -> str:
@@ -54,6 +58,7 @@ def log(msg: str) -> None:
 DEFAULT_CONFIG = {
     "device_id": "pc-a",
     "device_name": "작업용 PC A",
+    "workspace_uid": "",
     "poll_seconds": 10,
     "max_concurrent_managed_runs": 1,
     "run_timeout_minutes": 30,
@@ -151,7 +156,8 @@ def detect_tools(cfg: dict) -> dict:
 
 # ---------------------------------------------------------------- 장부
 class Ledger:
-    def __init__(self):
+    def __init__(self, cfg: dict | None = None):
+        cfg = cfg or {}
         import firebase_admin
         from firebase_admin import credentials, firestore
         if not KEY_PATH.exists():
@@ -159,13 +165,20 @@ class Ledger:
         firebase_admin.initialize_app(credentials.Certificate(str(KEY_PATH)))
         self.fs = firestore
         self.db = firestore.client()
-        docs = list(self.db.collection("workspaces").limit(5).stream())
-        if not docs:
-            raise SystemExit("장부(workspaces)가 비어 있습니다. 먼저 웹 사무실에서 구글 로그인을 한 번 하세요.")
-        if len(docs) > 1:
-            log(f"주의: workspace 문서가 {len(docs)}개입니다. 첫 번째를 사용합니다: {docs[0].id}")
-        self.ref = docs[0].reference
-        log(f"장부 연결: workspaces/{docs[0].id}")
+        want = str(cfg.get("workspace_uid") or "").strip()
+        if want:
+            self.ref = self.db.collection("workspaces").document(want)
+            if not self.ref.get().exists:
+                raise SystemExit(f"config.json 의 workspace_uid={want} 문서가 없습니다. 웹 사무실 → 설정 → 연결 에 보이는 UID 를 적으세요.")
+        else:
+            docs = list(self.db.collection("workspaces").limit(5).stream())
+            if not docs:
+                raise SystemExit("장부(workspaces)가 비어 있습니다. 먼저 웹 사무실에서 구글 로그인을 한 번 하세요.")
+            if len(docs) > 1:
+                raise SystemExit("workspace 문서가 여러 개입니다. config.json 에 workspace_uid 를 적어 어느 장부를 쓸지 고정하세요: " + ", ".join(d.id for d in docs))
+            self.ref = docs[0].reference
+            log(f"주의: config.json 에 workspace_uid 가 없어 유일한 장부 {docs[0].id} 를 씁니다. 고정하려면 workspace_uid 에 이 값을 적으세요.")
+        log(f"장부 연결: workspaces/{self.ref.id}")
 
     def mutate(self, fn):
         """fn(ws) -> bool(changed). 트랜잭션 안에서 적용. revision 을 올린다."""
@@ -203,6 +216,7 @@ class Ledger:
         return self.ref.collection("threads").document(thread_id).get().to_dict() or {}
 
     def thread_mutate(self, thread_id: str, fn):
+        """fn(t) -> bool. schema_version 2 면 fn 이 t['_new_messages'] / t['_patch_messages'] 에 모은 메시지를 같은 트랜잭션에서 하위 컬렉션에 쓴다."""
         ref = self.ref.collection("threads").document(thread_id)
         tx = self.db.transaction()
         fs = self.fs
@@ -211,12 +225,57 @@ class Ledger:
         def run(transaction):
             snap = ref.get(transaction=transaction)
             t = snap.to_dict() or {}
+            t.pop("_new_messages", None); t.pop("_patch_messages", None)
             if fn(t):
                 t["updated_at"] = now_iso()
+                new = t.pop("_new_messages", []); patches = t.pop("_patch_messages", [])
                 transaction.set(ref, t)
+                for m in new:
+                    transaction.set(ref.collection("messages").document(m["message_id"]), m)
+                for mid, patch in patches:
+                    transaction.set(ref.collection("messages").document(mid), patch, merge=True)
             return t
 
         return run(tx)
+
+    def thread_messages(self, thread_id: str, limit: int = 60) -> list:
+        col = self.ref.collection("threads").document(thread_id).collection("messages")
+        try:
+            docs = list(col.order_by("seq", direction=self.fs.Query.DESCENDING).limit(limit).stream())
+        except Exception:  # noqa: BLE001
+            docs = list(col.limit(limit * 2).stream())
+        out = [d.to_dict() for d in docs]
+        out.sort(key=lambda m: int(m.get("seq", 0)))
+        return out
+
+    def thread_message(self, thread_id: str, message_id: str) -> dict:
+        return self.ref.collection("threads").document(thread_id).collection("messages").document(message_id).get().to_dict() or {}
+
+    def recent_threads(self, n: int = 15) -> list:
+        col = self.ref.collection("threads")
+        try:
+            docs = list(col.order_by("updated_at", direction=self.fs.Query.DESCENDING).limit(n).stream())
+        except Exception:  # noqa: BLE001
+            docs = list(col.limit(n).stream())
+        return [d.to_dict() for d in docs]
+
+    def migrate_threads(self):
+        """schema 1(메시지 배열) → 2(하위 컬렉션). 원본 배열은 지우지 않는다. message_id 를 문서 ID 로 써서 다시 돌려도 중복이 없다 (OPS-01/02)."""
+        n = 0
+        for d in self.ref.collection("threads").limit(200).stream():
+            t = d.to_dict() or {}
+            if int(t.get("schema_version", 1)) >= 2 or t.get("status") != "idle":
+                continue
+            msgs = t.get("messages") or []
+            batch = self.db.batch()
+            for i, m in enumerate(msgs):
+                mid = m.get("message_id") or f"msg-legacy-{hashlib.sha1(json.dumps(m, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:12]}"
+                batch.set(d.reference.collection("messages").document(mid), {**m, "message_id": mid, "seq": i + 1})
+            batch.set(d.reference, {"schema_version": 2, "message_count": len(msgs), "legacy_migrated_at": now_iso(), "legacy_message_count": len(msgs)}, merge=True)
+            batch.commit()
+            n += 1
+        if n:
+            log(f"대화방 {n}개의 메시지를 하위 컬렉션으로 옮겼습니다 (원본 배열은 보존).")
 
 
 def next_seq(ws: dict) -> int:
@@ -379,13 +438,7 @@ def _gemini_supports(tool_path: str, token: str) -> bool:
 
 def build_command(tool_key: str, tool_path: str, read_only: bool = False, resume: str | None = None) -> list:
     if tool_key == "claude":
-        git_ro = ",".join(f"Bash(git {c}*)" for c in ("status", "diff", "log", "show", "ls-tree", "ls-files", "branch", "blame", "grep", "rev-parse", "remote -v", "fetch"))
-        shell_ro = ",".join(f"Bash({c} *)" for c in ("ls", "dir", "cat", "head", "tail", "wc", "find", "type"))
-        allowed = (f"Read,Grep,Glob,LS,{git_ro},{shell_ro}" if read_only else
-                   "Read,Edit,Write,MultiEdit,Grep,Glob,LS,"
-                   "Bash(npm test*),Bash(npm run*),Bash(npm ci*),Bash(npm install*),Bash(npx *),Bash(node *),"
-                   "Bash(python *),Bash(python3 *),Bash(py *),Bash(pip install*),Bash(pytest*),"
-                   f"{git_ro},{shell_ro},Bash(git stash*),Bash(git checkout -- *),Bash(git restore *)")
+        allowed = v2.claude_allowed("discuss" if read_only else "exec")
         cmd = [tool_path, "-p", "--output-format", "stream-json", "--verbose", "--allowedTools", allowed]
         if not read_only:
             cmd += ["--permission-mode", "acceptEdits"]
@@ -514,7 +567,8 @@ class Runner:
             log(f"도구 {k}: {t['status']} {t['version'] or ''} {t['path'] or ''}")
         RUNS_DIR.mkdir(parents=True, exist_ok=True)
         PROJECTS_DIR.mkdir(parents=True, exist_ok=True)
-        self.ledger = Ledger()
+        self.ledger = Ledger(self.cfg)
+        self.ledger.migrate_threads()
         self.active = None  # RunProcess
         self.active_run_id = None
         self.active_task_id = None
@@ -540,7 +594,9 @@ class Runner:
                 devices.append(dev)
             dev.update({"name": cfg["device_name"], "connection_state": "healthy", "last_heartbeat_at": now,
                         "max_concurrent_managed_runs": int(cfg["max_concurrent_managed_runs"]), "tools": tool_rows,
-                        "runner_version": VERSION})
+                        "runner_version": VERSION, "workspace_uid": self.ledger.ref.id, "worktrees_root": str(WORKTREES_DIR),
+                        "policy": {**v2.POLICY, "runner_version": VERSION, "reported_at": now,
+                                   "tools": {k: {**v, "installed": tools.get(k, {}).get("status") != "not_installed"} for k, v in v2.POLICY["tools"].items()}}})
             members = ws.setdefault("members", [])
             ui = ws.setdefault("ui", {})
             bindings = ui.setdefault("seat_bindings", {})
@@ -875,32 +931,86 @@ class Runner:
                 return key
         return None
 
-    def _thread_msg(self, t: dict, role: str, kind: str, text: str, member_id=None, run_id=None, replace_last_progress=False):
+    # ----- 메시지 (schema_version 2: threads/{id}/messages 하위 컬렉션, 1: 배열)
+    def _thread_msg(self, t: dict, role: str, kind: str, text: str, member_id=None, run_id=None, replace_last_progress=False, extra: dict | None = None):
+        if int(t.get("schema_version", 1)) >= 2:
+            if replace_last_progress and t.get("progress_message_id") and t.get("progress_run_id") == run_id:
+                t.setdefault("_patch_messages", []).append((t["progress_message_id"], {"text": text[:12000], "at": now_iso()}))
+                return
+            t["message_count"] = int(t.get("message_count", 0)) + 1
+            msg = {"message_id": f"msg-{uuid.uuid4().hex[:12]}", "seq": t["message_count"], "role": role, "member_id": member_id, "kind": kind,
+                   "text": text[:40000], "at": now_iso(), "run_id": run_id, **(extra or {})}
+            t.setdefault("_new_messages", []).append(msg)
+            t["last_message"] = {"kind": kind, "role": role, "text": text[:160], "at": msg["at"]}
+            if kind == "progress":
+                t["progress_message_id"] = msg["message_id"]; t["progress_run_id"] = run_id
+            return
         msgs = t.setdefault("messages", [])
         if replace_last_progress and msgs and msgs[-1].get("kind") == "progress" and msgs[-1].get("run_id") == run_id:
             msgs[-1]["text"] = text[:4000]
             msgs[-1]["at"] = now_iso()
             return
         msgs.append({"message_id": f"msg-{uuid.uuid4().hex[:12]}", "role": role, "member_id": member_id, "kind": kind,
-                     "text": text[:8000], "at": now_iso(), "run_id": run_id})
+                     "text": text[:8000], "at": now_iso(), "run_id": run_id, **(extra or {})})
         if len(msgs) > 300:
             del msgs[:len(msgs) - 300]
 
     def _transcript(self, t: dict, limit: int) -> str:
+        msgs = self.ledger.thread_messages(t["thread_id"], limit * 3) if int(t.get("schema_version", 1)) >= 2 else t.get("messages", [])
         lines = []
-        for m in [m for m in t.get("messages", []) if m.get("kind") in ("chat", "result", "review")][-limit:]:
+        for m in [m for m in msgs if m.get("kind") in ("chat", "result", "review", "question")][-limit:]:
             who = "소유자" if m.get("role") == "owner" else (m.get("member_id") or "사무실")
             lines.append(f"[{who}] {str(m.get('text', ''))[:1500]}")
         return "\n".join(lines)
 
-    def _git_diff_text(self, pdir: Path, limit=30000) -> str:
+    def _git_diff_text(self, pdir: Path, base: str | None = None, limit=30000) -> str:
         if not (pdir / ".git").exists():
             return "(git 저장소 아님)"
-        self._git(pdir, "add", "-N", ".")
-        code, stat = self._git(pdir, "diff", "--stat")
-        code2, diff = self._git(pdir, "diff")
+        if base:
+            code, stat = self._git(pdir, "diff", "--stat", base, "HEAD")
+            code2, diff = self._git(pdir, "diff", base, "HEAD")
+        else:
+            self._git(pdir, "add", "-N", ".")
+            code, stat = self._git(pdir, "diff", "--stat")
+            code2, diff = self._git(pdir, "diff")
         text = (stat or "") + "\n\n" + (diff or "")
         return text[:limit] + ("\n…(이하 생략)" if len(text) > limit else "")
+
+    # ----- 대화방 작업 폴더 (worktree)
+    def _worktree(self, t: dict, ws: dict) -> v2.Worktree:
+        proj = self._proj(t.get("project_id"), ws)
+        flow = self._flow(proj)
+        pdir = self.project_dir(t["project_id"], ws)
+        return v2.Worktree(self._git, pdir, WORKTREES_DIR / (str(proj.get("name") or t["project_id"])[:40] or "p"), t["thread_id"], flow["work"])
+
+    def _live_terminal_session(self, path: Path) -> bool:
+        """같은 폴더에서 터미널 Claude 세션(훅 관찰)이 살아 있는가 — 살아 있으면 쓰기 턴을 시작하지 않는다 (SYNC-10)."""
+        want = str(path).replace("\\", "/").rstrip("/").lower()
+        for s in self.observer.sessions.values():
+            if not s.get("ended") and str(s.get("cwd") or "").replace("\\", "/").rstrip("/").lower() == want:
+                return True
+        return False
+
+    def _sync_state(self, wt: v2.Worktree, check_remote: bool) -> dict:
+        return {"branch": wt.current_branch(), "head_sha": wt.head(), "dirty_paths": wt.dirty_paths()[:50],
+                "checked_at": now_iso(), "remote": wt.remote_state() if check_remote else "unchecked", "worktree": str(wt.path)}
+
+    def _add_checkpoint(self, t: dict, wt: v2.Worktree, base: str | None, sha: str, paths: list, origin: str, run_id=None, note: str = "") -> dict:
+        cp = {"checkpoint_id": f"cp-{sha[:10]}", "branch": wt.branch, "base_sha": base, "candidate_sha": sha, "changed_paths": paths[:100],
+              "origin": origin, "run_id": run_id, "at": now_iso(), "remote_sync_status": "local_only", "tests": None, "note": note[:300]}
+        cps = t.setdefault("checkpoints", [])
+        if not any(c.get("candidate_sha") == sha for c in cps):
+            cps.append(cp)
+            if len(cps) > 30:
+                del cps[:len(cps) - 30]
+        t["working_checkpoint_id"] = cp["checkpoint_id"]
+        cp["context_version"] = v2.bump_context(t, "체크포인트", f"{origin} 에서 {sha[:10]} 저장 — {', '.join(paths[:6])}{' 외' if len(paths) > 6 else ''}")
+        # 이전 검토는 다른 버전에 대한 것이 된다
+        for r in t.get("reviews", []):
+            if r.get("target_sha") != sha and not r.get("stale"):
+                r["stale"] = True
+        t["reviewed_checkpoint_id"] = None
+        return cp
 
     def check_chat(self, ws: dict):
         """진행 중 턴 중계·종료, 없으면 큐에서 하나 시작 (작업 카드 실행과 합쳐 PC당 1개)."""
@@ -912,30 +1022,69 @@ class Runner:
         for t in self.ledger.queued_threads():
             pend = t.get("pending") or {}
             member = pend.get("member_id") or t.get("member_id")
-            if pend.get("mode") == "publish":
-                self._chat_publish(t)
+            mode = pend.get("mode", "chat")
+            if mode in ("publish", "checkpoint", "share"):
+                self._chat_git_action(t, mode)
                 return
             tool_key = self._member_tool(member)
             if not tool_key:
-                self.ledger.thread_mutate(t["thread_id"], lambda th: (self._thread_msg(th, "system", "error", f"{member} 는 이 PC 에 연결된 도구가 아닙니다."), th.update({"status": "idle", "pending": None}), True)[-1])
+                self.ledger.thread_mutate(t["thread_id"], lambda th: (self._thread_msg(th, "system", "error", f"{member} 는 이 PC 에 연결된 도구가 아닙니다. (GPT 는 API 어댑터가 없어 아직 대화 상대가 아닙니다)"), th.update({"status": "idle", "pending": None}), True)[-1])
                 continue
             self._chat_start(t, tool_key, member, pend)
             return
 
     def _chat_start(self, t: dict, tool_key: str, member_id: str, pend: dict):
         thread_id = t["thread_id"]
-        mode = pend.get("mode", "chat")
+        mode = pend.get("mode", "chat")            # discuss | chat(실행) | review
         ws = self.ledger.read()
-        pdir = self.project_dir(t["project_id"], ws)
+        proj = self._proj(t.get("project_id"), ws)
+        wt = self._worktree(t, ws)
+        ok, note = wt.ensure()
+        notes = [n for n in (getattr(self, "last_git_note", ""), note) if n]
+        if not ok:
+            # worktree 를 못 만들면 프로젝트 폴더에서 논의만 한다
+            pdir = self.project_dir(t["project_id"], ws)
+            if mode == "chat":
+                self.ledger.thread_mutate(thread_id, lambda th: (self._thread_msg(th, "system", "error", note + " 논의 모드로만 쓸 수 있습니다."), th.update({"status": "idle", "pending": None}), True)[-1])
+                return
+            cwd = pdir; base_sha = None
+        else:
+            cwd = wt.path
+            base_sha = wt.head()
+        review_target = None; review_copy = None; review_id = None
+        pre_dirty: list = []
+        if ok and mode == "chat":
+            if self._live_terminal_session(wt.path):
+                self.ledger.thread_mutate(thread_id, lambda th: (self._thread_msg(th, "system", "error", "이 작업 폴더에서 터미널 Claude 세션이 아직 열려 있습니다. 그 세션을 끝내거나 논의 모드로 보내 주세요."), th.update({"status": "idle", "pending": None}), True)[-1])
+                return
+            # 앱(터미널)에서 고치고 커밋하지 않은 변경 → 소유권을 '앱'으로 하여 먼저 저장 (실행 결과와 섞지 않는다)
+            pre_dirty = wt.dirty_paths()
+            if pre_dirty:
+                sha, msg, skipped = wt.checkpoint(pre_dirty, f"앱에서 수정한 변경 (CBAO {thread_id})")
+                if sha:
+                    def pre_fn(th: dict) -> bool:
+                        self._add_checkpoint(th, wt, base_sha, sha, [p for p in pre_dirty if p not in skipped], "app", None, "실행 전 발견된 미커밋 변경")
+                        self._thread_msg(th, "system", "checkpoint", f"앱에서 수정하고 커밋하지 않은 변경 {len(pre_dirty)}개를 먼저 저장했습니다 ({sha[:10]}).", extra={"checkpoint_sha": sha})
+                        return True
+                    self.ledger.thread_mutate(thread_id, pre_fn)
+                    base_sha = sha
+        if ok and mode == "review":
+            review_target = pend.get("target_sha") or wt.head()
+            review_id = pend.get("review_id") or f"rev-{uuid.uuid4().hex[:10]}"
+            review_copy, err = wt.review_copy(review_target, WORKTREES_DIR / "_review")
+            if review_copy is None:
+                self.ledger.thread_mutate(thread_id, lambda th: (self._thread_msg(th, "system", "error", err), th.update({"status": "idle", "pending": None}), True)[-1])
+                return
+            cwd = review_copy
         run_id = f"run-{dt.datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
         now = now_iso()
-        # 장부: run + task 상태
+
         def wfn(w: dict) -> bool:
             w.setdefault("runs", []).append({
                 "run_id": run_id, "task_id": thread_id, "member_id": member_id, "device_id": self.cfg["device_id"],
                 "status": "running", "evidence_source": "runner_observed", "last_confirmed_at": now,
-                "phase": "reviewing" if mode == "review" else "implementing", "started_at": now, "sequence": next_seq(w),
-                "cancel_requested_at": None, "cancel_delivery": "none", "tool": tool_key, "chat": True,
+                "phase": "reviewing" if mode in ("review", "discuss") else "implementing", "started_at": now, "sequence": next_seq(w),
+                "cancel_requested_at": None, "cancel_delivery": "none", "tool": tool_key, "chat": True, "mode": mode,
             })
             for task in w.get("tasks", []):
                 if task.get("task_id") == thread_id:
@@ -945,31 +1094,54 @@ class Runner:
         # 프롬프트
         owner_text = ""
         if pend.get("message_id"):
-            m = next((x for x in t.get("messages", []) if x.get("message_id") == pend["message_id"]), None)
+            m = self.ledger.thread_message(thread_id, pend["message_id"]) if int(t.get("schema_version", 1)) >= 2 else next((x for x in t.get("messages", []) if x.get("message_id") == pend["message_id"]), None)
             owner_text = str(m.get("text", "")) if m else ""
         sessions = t.get("sessions") or {}
         resume = sessions.get(tool_key) if tool_key in ("claude", "codex") and mode != "review" else None
+        ctx = t.get("context") or {}
+        delivered = int((ctx.get("delivered") or {}).get(tool_key, 0))
+        capsule = v2.context_capsule(t, delivered, proj) if (resume and int(ctx.get("version", 0)) > delivered) else ""
+        mode_line = {
+            "discuss": "[논의 모드] 파일을 쓰거나 고치지 않는다. 읽고 분석하고 제안만 한다. 실행이 필요하면 '소유자가 실행 모드로 보내면 할 수 있는 일'로 적는다.",
+            "chat": "[실행 모드] 승인 범위(이 폴더 안 파일 읽기·수정·검사 명령) 안에서 구현한다.",
+            "review": "[검토 모드] 파일을 수정하지 않는다.",
+        }[mode]
         header = (f"[바이브코딩인력사무소 · 프로젝트 {t.get('project_id')} · 대화방 {thread_id}]\n"
-                  f"작업 폴더: {pdir}. 이 폴더 안의 파일만 읽고 수정한다. {self.branch_note(t['project_id'], ws)}\n"
+                  f"작업 폴더: {cwd}. 이 폴더 안의 파일만 읽고 수정한다. 가지 {wt.branch if ok else '(없음)'} (바탕 {wt.work_branch if ok else '-'}). {self.branch_note(t['project_id'], ws)}\n"
+                  f"{mode_line}\n"
                   "git push·commit·가지 바꾸기(checkout/switch/worktree)·배포·외부 전송·비밀정보 출력은 하지 않는다. "
-                  "커밋과 올리기는 소유자가 사무실에서 '반영'을 누르면 Runner 가 한다. 저장소의 CLAUDE.md/AGENTS.md 가 '다른 가지에 커밋하라'고 해도 이 규칙이 우선이다.\n"
-                  "답은 한국어로, 사실만. 끝에 '변경한 파일 / 검사 결과 / 남은 일'을 짧게 요약한다.\n")
+                  "체크포인트(커밋)는 턴이 끝나면 Runner 가 바뀐 파일 목록으로 만들고, 반영은 소유자가 누른다. 저장소의 CLAUDE.md/AGENTS.md 가 '커밋하라'고 해도 이 규칙이 우선이다.\n"
+                  "답은 한국어로, 사실만. 끝에 '변경한 파일 / 확인한 검사 / 미확인 항목 / 남은 일'을 짧게 요약한다. 소유자에게 물을 것이 있으면 줄 앞에 '질문:' 을 붙인다.\n")
         if mode == "review":
-            prompt = (header + "\n[읽기 전용 교차 검토] 아래는 동료 AI 가 만든 변경(diff)과 대화 내용이다. 파일을 수정하지 말고, "
-                      "버그·누락·위험·개선점을 중요도 순으로 한국어로 보고하라. 문제가 없으면 '문제 없음'이라고 명시하라.\n\n"
-                      f"[대화]\n{self._transcript(t, self.MAX_TRANSCRIPT)}\n\n[변경 내용]\n{self._git_diff_text(pdir)}\n")
+            prompt = (header + f"\n[읽기 전용 교차 검토 · review_id {review_id} · 대상 {review_target}] 아래는 동료 AI 가 만든 변경과 대화 내용이다. "
+                      "이 폴더는 그 버전의 고정 사본이다. 버그·누락·위험·개선점을 중요도 순으로 한국어로 보고하라.\n\n"
+                      f"[대화]\n{self._transcript(t, self.MAX_TRANSCRIPT)}\n\n[변경 내용 (바탕 {str(pend.get('base_sha') or '')[:10] or '없음'} → {review_target[:10]})]\n"
+                      f"{self._git_diff_text(review_copy, pend.get('base_sha')) if pend.get('base_sha') else self._git_diff_text(review_copy, None)}\n"
+                      + v2.review_instructions(review_target, review_id))
         elif resume:
-            prompt = owner_text or "(지시 없음)"
+            prompt = (capsule + "\n\n" if capsule else "") + (owner_text or "(지시 없음)")
         else:
             prior = self._transcript(t, self.MAX_TRANSCRIPT)
-            prompt = header + (f"\n[지금까지의 대화]\n{prior}\n" if prior else "") + f"\n[새 지시]\n{owner_text or '(지시 없음)'}\n"
-        cmd = build_command(tool_key, self.tools[tool_key]["path"], read_only=(mode == "review"), resume=resume)
-        rp = RunProcess(run_id, cmd, pdir, prompt, RUNS_DIR / f"{run_id}.log", int(self.cfg["run_timeout_minutes"]))
+            prompt = header + (f"\n[지금까지의 대화]\n{prior}\n" if prior else "") + (f"\n{v2.context_capsule(t, 0, proj)}\n" if ctx.get("version") else "") + f"\n[새 지시]\n{owner_text or '(지시 없음)'}\n"
+        cmd = build_command(tool_key, self.tools[tool_key]["path"], read_only=(mode in ("review", "discuss")), resume=resume)
+        rp = RunProcess(run_id, cmd, cwd, prompt, RUNS_DIR / f"{run_id}.log", int(self.cfg["run_timeout_minutes"]))
         rp.start()
-        self.chat = {"thread_id": thread_id, "turn": pend, "rp": rp, "run_id": run_id, "tool_key": tool_key, "member_id": member_id, "mode": mode, "last_relay": 0.0, "resume_used": bool(resume)}
-        note = getattr(self, "last_git_note", "")
-        self.ledger.thread_mutate(thread_id, lambda th: (th.update({"status": "running"}), note and self._thread_msg(th, "system", "progress", note), self._thread_msg(th, "member", "progress", "시작…", member_id, run_id), True)[-1])
-        log(f"대화 턴 시작 {thread_id} ({tool_key}, {mode}{', resume' if resume else ''})")
+        self.chat = {"thread_id": thread_id, "turn": pend, "rp": rp, "run_id": run_id, "tool_key": tool_key, "member_id": member_id, "mode": mode,
+                     "last_relay": 0.0, "resume_used": bool(resume), "wt": wt if ok else None, "base_sha": base_sha, "review_target": review_target,
+                     "review_copy": review_copy, "review_id": review_id, "capsule_version": int(ctx.get("version", 0)) if capsule else None}
+
+        def sfn(th: dict) -> bool:
+            th["status"] = "running"
+            for n in notes:
+                self._thread_msg(th, "system", "progress", n)
+            if capsule:
+                self._thread_msg(th, "system", "progress", f"세션 밖 맥락(버전 {ctx.get('version')})을 {tool_key} 세션에 전달합니다.", extra={"capsule": capsule[:4000]})
+            self._thread_msg(th, "member", "progress", "시작…", member_id, run_id)
+            if ok:
+                th["sync"] = self._sync_state(wt, check_remote=False)
+            return True
+        self.ledger.thread_mutate(thread_id, sfn)
+        log(f"대화 턴 시작 {thread_id} ({tool_key}, {mode}{', resume' if resume else ''}) in {cwd}")
 
     def _chat_tick(self, ws: dict):
         c = self.chat; rp = c["rp"]
@@ -1008,7 +1180,23 @@ class Runner:
             result = f"실행이 정상 종료되지 않았습니다 (exit={rp.exit_code}{', 시간 초과' if timed_out else ''}{', 중지됨' if cancelled else ''}). 로그: {rp.log_path}"
             if c.get("resume_used"):
                 result += "\n(이전 대화 이어가기에 실패했을 수 있습니다. 다시 보내면 새 대화로 시작합니다.)"
-        mode, member_id, thread_id = c["mode"], c["member_id"], c["thread_id"]
+        mode, member_id, thread_id, wt = c["mode"], c["member_id"], c["thread_id"], c.get("wt")
+        # 실행 모드: 바뀐 파일을 명시 목록으로 체크포인트
+        cp_sha = None; cp_paths: list = []; cp_note = ""; cp_skipped: list = []
+        if ok and mode == "chat" and wt is not None:
+            cp_paths = wt.dirty_paths()
+            if cp_paths:
+                title = str(self.ledger.thread_read(thread_id).get("title") or "변경")[:50]
+                cp_sha, cp_note, cp_skipped = wt.checkpoint(cp_paths, f"{title} (CBAO {thread_id} · {c['run_id']})")
+        # 검토 모드: JSON 계약 파싱
+        review = None
+        if mode == "review":
+            parsed = v2.parse_review(result, c.get("review_target"), c.get("review_id")) if ok else {"verdict": "error", "findings": [], "checked": [], "unverified": [], "error": "검토 실행이 정상 종료되지 않았습니다."}
+            review = {"review_id": c.get("review_id"), "reviewer_id": member_id, "target_sha": c.get("review_target"), "base_sha": (c["turn"] or {}).get("base_sha"),
+                      "verdict": parsed["verdict"], "findings": parsed["findings"], "checked": parsed["checked"], "unverified": parsed["unverified"],
+                      "error": parsed.get("error"), "at": now, "run_id": c["run_id"], "stale": False}
+            if c.get("review_copy") is not None and wt is not None:
+                wt.drop_review_copy(c["review_copy"])
 
         def wfn(w: dict) -> bool:
             r = next((x for x in w.get("runs", []) if x.get("run_id") == c["run_id"]), None)
@@ -1020,88 +1208,198 @@ class Runner:
                     task["status"] = "review" if ok else "blocked"; task["updated_at"] = now
             w.setdefault("artifacts", []).append({"artifact_id": f"art-{c['run_id']}-log", "task_id": thread_id, "member_id": member_id,
                                                   "title": f"실행 로그 {c['run_id']}", "kind": "file", "reference": str(rp.log_path), "content_hash": None, "submitted_at": now})
+            if cp_sha:
+                w["artifacts"].append({"artifact_id": f"art-cp-{cp_sha[:10]}", "task_id": thread_id, "member_id": member_id, "title": f"체크포인트 {cp_sha[:10]} ({len(cp_paths)} 파일)",
+                                       "kind": "note", "reference": cp_sha, "content_hash": cp_sha, "submitted_at": now})
             return True
         self.ledger.mutate(wfn)
 
         def tfn(t: dict) -> bool:
             # 진행 메시지 정리 후 결과 추가
-            msgs = t.get("messages", [])
-            if msgs and msgs[-1].get("kind") == "progress" and msgs[-1].get("run_id") == c["run_id"]:
-                msgs[-1]["text"] = "\n".join(rp.progress[-20:]) or "(진행 기록 없음)"
-            self._thread_msg(t, "member", "review" if mode == "review" else ("result" if ok else "error"), result or "(응답 없음)", member_id, c["run_id"])
+            if int(t.get("schema_version", 1)) >= 2:
+                if t.get("progress_message_id") and t.get("progress_run_id") == c["run_id"]:
+                    t.setdefault("_patch_messages", []).append((t["progress_message_id"], {"text": "\n".join(rp.progress[-20:]) or "(진행 기록 없음)"}))
+            else:
+                msgs = t.get("messages", [])
+                if msgs and msgs[-1].get("kind") == "progress" and msgs[-1].get("run_id") == c["run_id"]:
+                    msgs[-1]["text"] = "\n".join(rp.progress[-20:]) or "(진행 기록 없음)"
+            kind = "review" if mode == "review" else ("result" if ok else "error")
+            extra = {"mode": mode}
+            if review:
+                extra.update({"review_id": review["review_id"], "verdict": review["verdict"], "target_sha": review["target_sha"]})
+            self._thread_msg(t, "member", kind, result or "(응답 없음)", member_id, c["run_id"], extra=extra)
+            if ok and "질문:" in result:
+                qs = [l.strip()[3:].strip() for l in result.splitlines() if l.strip().startswith("질문:")]
+                if qs:
+                    self._thread_msg(t, "member", "question", "\n".join(qs)[:2000], member_id, c["run_id"])
+                    ctx = t.setdefault("context", {"version": 0, "decisions": [], "open_questions": [], "delivered": {}})
+                    ctx["open_questions"] = (ctx.get("open_questions") or [])[-4:] + qs[:3]
             if rp.session_id and (not c.get("resume_used") or ok) and mode != "review":
                 t.setdefault("sessions", {})[c["tool_key"]] = rp.session_id
             if not ok and c.get("resume_used"):
                 t.setdefault("sessions", {}).pop(c["tool_key"], None)
+            if ok and c.get("capsule_version") is not None:
+                t.setdefault("context", {}).setdefault("delivered", {})[c["tool_key"]] = c["capsule_version"]
+            if cp_sha and wt is not None:
+                self._add_checkpoint(t, wt, c.get("base_sha"), cp_sha, [p for p in cp_paths if p not in cp_skipped], "office", c["run_id"])
+                self._thread_msg(t, "system", "checkpoint", f"체크포인트 {cp_sha[:10]} 저장 — {len(cp_paths) - len(cp_skipped)} 파일" + (f" (보호 파일 제외: {', '.join(cp_skipped)})" if cp_skipped else "") + ". 아직 이 PC 에만 있습니다.", extra={"checkpoint_sha": cp_sha})
+            elif ok and mode == "chat" and wt is not None and not cp_paths:
+                self._thread_msg(t, "system", "progress", "바뀐 파일이 없어 체크포인트를 만들지 않았습니다.")
+            if wt is not None:
+                t["sync"] = self._sync_state(wt, check_remote=False)
+            if review:
+                revs = t.setdefault("reviews", [])
+                revs.append(review)
+                if len(revs) > 20:
+                    del revs[:len(revs) - 20]
+                review["context_version"] = v2.bump_context(t, "검토", f"{review['reviewer_id']} 가 {str(review['target_sha'] or '')[:10]} 를 검토: {review['verdict']} ({len(review['findings'])} 지적)")
+                if review["verdict"] == "pass" and t.get("sync", {}).get("head_sha") == review["target_sha"]:
+                    t["reviewed_checkpoint_id"] = f"cp-{review['target_sha'][:10]}"
+                if review["verdict"] == "error":
+                    self._thread_msg(t, "system", "error", f"검토 결과를 판정으로 인정하지 않았습니다: {review.get('error')}")
             t["status"] = "idle"; t["pending"] = None
-            # 자동 교차 검토 1회 + 수정 1회 (무한 토론 방지)
-            reviewer = t.get("auto_review_member_id")
-            if ok and mode == "chat" and reviewer and reviewer != member_id and not t.get("auto_review_done"):
-                t["auto_review_done"] = True
-                t["pending"] = {"turn_id": f"turn-{uuid.uuid4().hex[:10]}", "member_id": reviewer, "mode": "review", "message_id": None, "requested_at": now}
-                t["status"] = "queued"
-                self._thread_msg(t, "system", "chat", f"자동 검토 요청 → {reviewer} (읽기 전용, 1회)")
-            elif ok and mode == "review" and reviewer and not t.get("auto_fix_done") and t.get("auto_review_done") and "문제 없음" not in result:
-                t["auto_fix_done"] = True
-                mid = f"msg-{uuid.uuid4().hex[:12]}"
-                t.setdefault("messages", []).append({"message_id": mid, "role": "system", "member_id": None, "kind": "chat", "at": now,
-                                                     "text": "검토 의견 중 타당한 지적을 반영해 수정하라. 동의하지 않는 지적은 이유를 적고 넘어가라. (자동 수정 1회)"})
-                t["pending"] = {"turn_id": f"turn-{uuid.uuid4().hex[:10]}", "member_id": t.get("member_id"), "mode": "chat", "message_id": mid, "requested_at": now}
-                t["status"] = "queued"
+            self._chain_next(t, mode, ok, member_id, review, cp_sha, now)
             return True
         self.ledger.thread_mutate(thread_id, tfn)
         if ok:
             self.tools[c["tool_key"]]["tested"] = True
-        log(f"대화 턴 종료 {thread_id}: {status}")
+        log(f"대화 턴 종료 {thread_id}: {status}" + (f" · 체크포인트 {cp_sha[:10]}" if cp_sha else "") + (f" · 검토 {review['verdict']}" if review else ""))
         self.chat = None
 
-    def _chat_publish(self, t: dict):
-        """소유자 '반영' → 작업 가지에 커밋·푸시. 빌드·배포 가지가 설정돼 있으면 빌드해서 배포 가지에도 올린다. AI 호출 없음."""
+    def _chain_next(self, t: dict, mode: str, ok: bool, member_id: str, review: dict | None, cp_sha: str | None, now: str):
+        """자동 흐름: 실행 → (자동검토) 검토 → changes_required 면 수정 → 재검토 … 최대 MAX_FIX_ROUNDS. 그 뒤엔 사람 판단."""
+        reviewer = t.get("auto_review_member_id")
+        rounds = int(t.get("fix_rounds", 0))
+        head = (t.get("sync") or {}).get("head_sha")
+        if ok and mode == "chat" and reviewer and reviewer != member_id and cp_sha and rounds <= v2.MAX_FIX_ROUNDS:
+            rid = f"rev-{uuid.uuid4().hex[:10]}"
+            base = next((c.get("base_sha") for c in reversed(t.get("checkpoints", [])) if c.get("candidate_sha") == cp_sha), None)
+            t["pending"] = {"turn_id": f"turn-{uuid.uuid4().hex[:10]}", "member_id": reviewer, "mode": "review", "message_id": None, "requested_at": now,
+                            "target_sha": cp_sha, "base_sha": base, "review_id": rid}
+            t["status"] = "queued"
+            self._thread_msg(t, "system", "chat", f"자동 검토 요청 → {reviewer} (대상 {cp_sha[:10]}, 읽기 전용, {rounds + 1}번째)")
+        elif mode == "review" and review and review["verdict"] == "changes_required" and reviewer and head == review["target_sha"] and rounds < v2.MAX_FIX_ROUNDS:
+            t["fix_rounds"] = rounds + 1
+            findings = json.dumps(review["findings"], ensure_ascii=False, indent=1)
+            text = (f"[검토 반영 요청 · review_id {review['review_id']} · 대상 {review['target_sha']} · 보완 {rounds + 1}/{v2.MAX_FIX_ROUNDS}]\n"
+                    f"{review['reviewer_id']} 의 지적을 하나씩 처리하라. 각 지적에 대해 '수정함 / 동의하지 않음(이유) / 소유자 판단 필요' 중 하나로 답한다.\n"
+                    f"지적 목록(JSON):\n{findings}\n")
+            self._thread_msg(t, "system", "chat", text, extra={"review_id": review["review_id"]})
+            mid = (t.get("_new_messages") or [{}])[-1].get("message_id") if int(t.get("schema_version", 1)) >= 2 else t["messages"][-1]["message_id"]
+            t["pending"] = {"turn_id": f"turn-{uuid.uuid4().hex[:10]}", "member_id": t.get("member_id"), "mode": "chat", "message_id": mid, "requested_at": now, "review_id": review["review_id"]}
+            t["status"] = "queued"
+        elif mode == "review" and review and (review["verdict"] in ("needs_human", "blocked", "error") or (review["verdict"] == "changes_required" and (rounds >= v2.MAX_FIX_ROUNDS or head != review["target_sha"]))):
+            if review["verdict"] == "changes_required" and head != review["target_sha"]:
+                why = "검토 뒤 코드가 바뀌어(새 체크포인트) 이 검토를 자동 반영하지 않습니다. 새 버전을 다시 검토하거나 직접 지시하세요."
+            else:
+                why = {"needs_human": "검토자가 소유자 판단이 필요하다고 했습니다.", "blocked": "검토자가 자료·환경 부족으로 검토하지 못했습니다.",
+                       "error": "검토 결과가 계약 형식이 아니라 판정으로 인정하지 않았습니다.", "changes_required": f"자동 보완 한도({v2.MAX_FIX_ROUNDS}회)에 닿았습니다. 남은 지적은 소유자가 판단해 주세요."}[review["verdict"]]
+            t["needs_owner"] = {"reason": why, "review_id": review["review_id"], "at": now}
+            self._thread_msg(t, "system", "question", f"소유자 판단이 필요합니다: {why}")
+        elif mode == "review" and review and review["verdict"] == "pass":
+            t["fix_rounds"] = 0
+            t["needs_owner"] = None
+        # 자동 흐름이 더 없으면, 소유자가 실행 중에 적어 둔 다음 요청을 시작한다
+        nxt = t.get("next_messages") or []
+        if t.get("status") == "idle" and nxt:
+            m = nxt.pop(0)
+            t["next_messages"] = nxt
+            t["pending"] = {"turn_id": f"turn-{uuid.uuid4().hex[:10]}", "member_id": m.get("member_id") or t.get("member_id"), "mode": m.get("mode", "chat"), "message_id": m.get("message_id"), "requested_at": now}
+            t["status"] = "queued"
+            self._thread_msg(t, "system", "progress", "실행 중에 받아 둔 다음 요청을 시작합니다.")
+
+    # ----- 소유자 버튼: 체크포인트 저장 / 원격 공유 / 반영
+    def _chat_git_action(self, t: dict, action: str):
+        thread_id = t["thread_id"]; now = now_iso()
+        ws = self.ledger.read()
+        wt = self._worktree(t, ws)
+        ok, note = wt.ensure()
+        if not ok:
+            self.ledger.thread_mutate(thread_id, lambda th: (self._thread_msg(th, "system", "error", note), th.update({"status": "idle", "pending": None}), True)[-1])
+            return
+        if action == "checkpoint":
+            paths = wt.dirty_paths()
+            base = wt.head()
+            sha, msg, skipped = wt.checkpoint(paths, f"수동 체크포인트 (CBAO {thread_id})") if paths else (None, "바뀐 파일이 없습니다.", [])
+            def cfn(th: dict) -> bool:
+                if sha:
+                    self._add_checkpoint(th, wt, base, sha, [p for p in paths if p not in skipped], "app", None, "소유자가 수동으로 저장 (앱에서 고친 변경)")
+                    self._thread_msg(th, "system", "checkpoint", f"체크포인트 {sha[:10]} 저장 — {len(paths) - len(skipped)} 파일. 아직 이 PC 에만 있습니다.", extra={"checkpoint_sha": sha})
+                else:
+                    self._thread_msg(th, "system", "progress", msg)
+                th["sync"] = self._sync_state(wt, check_remote=False)
+                th["status"] = "idle"; th["pending"] = None
+                return True
+            self.ledger.thread_mutate(thread_id, cfn)
+            return
+        if action == "share":
+            pushed, out = wt.push()
+            state = wt.remote_state() if pushed else "unknown"
+            def shfn(th: dict) -> bool:
+                if pushed:
+                    for cp in th.get("checkpoints", []):
+                        if cp.get("branch") == wt.branch:
+                            cp["remote_sync_status"] = "pushed"
+                    self._thread_msg(th, "system", "publish", f"가지 {wt.branch} 를 GitHub 에 올렸습니다. 다른 PC 에서도 이어갈 수 있습니다. (main 반영 아님)")
+                else:
+                    self._thread_msg(th, "system", "error", f"원격 공유 실패 (GitHub 로그인 확인): {out}")
+                th["sync"] = {**self._sync_state(wt, check_remote=False), "remote": state}
+                th["status"] = "idle"; th["pending"] = None
+                return True
+            self.ledger.thread_mutate(thread_id, shfn)
+            return
+        self._chat_publish(t, wt)
+
+    def _chat_publish(self, t: dict, wt: v2.Worktree):
+        """소유자 '반영' → 대화방 가지(office/<id>)를 작업 가지에 합치고 push. 빌드·배포 가지가 설정돼 있으면 빌드해서 배포 가지에도 올린다. AI 호출 없음."""
         thread_id = t["thread_id"]; now = now_iso()
         ws = self.ledger.read()
         proj = self._proj(t.get("project_id"), ws)
         flow = self._flow(proj)
         pdir = self.project_dir(t["project_id"], ws)
-        res = {"status": "failed", "message": "", "at": now, "commit": None}
+        res = {"status": "failed", "message": "", "at": now, "commit": None, "deploy_commit": None, "deployed": False}
         if not which("git") or not (pdir / ".git").exists():
             res["message"] = "git 저장소가 아니거나 git 이 없습니다."
+        elif wt.dirty_paths():
+            res["message"] = "작업 폴더에 저장하지 않은 변경이 있습니다. 먼저 '체크포인트 저장'을 누르세요."
         else:
             code, out = self._git(pdir, "status", "--porcelain", "--", *self._status_spec(flow))
-            if code == 0 and not out:
-                res.update({"status": "nothing", "message": "바뀐 파일이 없습니다."})
+            if code == 0 and out:
+                res["message"] = f"프로젝트 본 폴더({pdir})에 올리지 않은 변경이 있어 합칠 수 없습니다: {out[:200]}"
             else:
-                title = str(t.get("title") or "변경")[:60]
-                msg = f"{title} (CBAO 대화 {thread_id}, 소유자 반영)"
-                steps = (("add", "-A", "--", *self._status_spec(flow)), ("commit", "-m", msg))
                 ok = True
-                for args in steps:
-                    code, out = self._git(pdir, *args)
+                self._git(pdir, "fetch", "origin", flow["work"], timeout=300)
+                for args in (("checkout", flow["work"]), ("pull", "--ff-only", "origin", flow["work"])):
+                    code, out = self._git(pdir, *args, timeout=300)
                     if code != 0:
                         res["message"] = f"git {args[0]} 실패: {out[-300:]}"; ok = False; break
                 if ok:
-                    code, out = self._git(pdir, "pull", "--rebase", "origin", flow["work"], timeout=300)
+                    code, out = self._git(pdir, "merge", "--no-ff", "-m", f"{str(t.get('title') or '변경')[:60]} (CBAO 대화 {thread_id}, 소유자 반영)", wt.branch)
                     if code != 0:
-                        self._git(pdir, "rebase", "--abort")
-                        res["message"] = f"원격 변경과 충돌: {out[-300:]}"; ok = False
+                        self._git(pdir, "merge", "--abort")
+                        res["message"] = f"작업 가지 {flow['work']} 와 충돌: {out[-300:]} — 대화방에서 '최신 {flow['work']} 와 맞추기'를 요청하세요."; ok = False
+                if ok and not (flow["deploy_dir"] and flow["deploy"] != flow["work"]):
+                    pass
                 if ok:
                     code, out = self._git(pdir, "push", "origin", f"HEAD:{flow['work']}", timeout=600)
                     if code != 0:
                         res["message"] = f"push 실패 (GitHub 로그인 확인): {out[-300:]}"; ok = False
                 if ok:
                     _, sha = self._git(pdir, "rev-parse", "HEAD")
-                    res.update({"status": "pushed", "message": f"{proj.get('repo_reference') or ''} {flow['work']} 에 반영했습니다.", "commit": sha})
-                    dok, dmsg, dsha = self._build_and_deploy(pdir, flow, msg)
+                    res.update({"status": "pushed", "message": f"{proj.get('repo_reference') or ''} {flow['work']} 에 합쳐 올렸습니다.", "commit": sha})
+                    dok, dmsg, dsha = self._build_and_deploy(pdir, flow, f"{str(t.get('title') or '변경')[:60]} (CBAO 대화 {thread_id})")
                     if dmsg:
                         res["message"] += " " + dmsg
                     if not dok:
-                        res["status"] = "failed"
-                        res["message"] = f"{flow['work']} 에는 올렸지만 배포는 실패: " + dmsg
+                        res["status"] = "failed"; res["message"] = f"{flow['work']} 에는 올렸지만 빌드·배포는 실패: " + dmsg
                     if dsha:
                         res["deploy_commit"] = dsha
+                    res["deployed"] = False  # 실제 서비스 배포 확인은 별도 (push ≠ 배포 완료)
         def tfn(th: dict) -> bool:
             th["last_publish"] = res
             if res["status"] == "pushed":
                 th["publish_count"] = int(th.get("publish_count", 0)) + 1
+                th["accepted_checkpoint_id"] = th.get("working_checkpoint_id")
             self._thread_msg(th, "system", "publish" if res["status"] != "failed" else "error", res["message"])
             th["status"] = "idle"; th["pending"] = None
             return True
@@ -1120,6 +1418,76 @@ class Runner:
                 return True
             self.ledger.mutate(wfn)
         log(f"반영 {thread_id}: {res['status']} {res['message']}")
+
+    # ----- 앱 → 오피스: 대화방 작업 폴더의 변경 감지 (SYNC-03/04)
+    def sync_threads(self, ws: dict):
+        if time.time() - getattr(self, "_last_sync", 0) < 30:
+            return
+        self._last_sync = time.time()
+        busy = self.chat["thread_id"] if self.chat else None
+        for t in self.ledger.recent_threads(15):
+            tid = t.get("thread_id")
+            if not tid or tid == busy or t.get("status") != "idle":
+                continue
+            try:
+                wt = self._worktree(t, ws)
+            except Exception:  # noqa: BLE001
+                continue
+            if not (wt.path / ".git").exists():
+                continue
+            head = wt.head(); dirty = wt.dirty_paths()
+            prev = t.get("sync") or {}
+            if prev.get("head_sha") == head and sorted(prev.get("dirty_paths") or []) == sorted(dirty[:50]):
+                continue
+            live = self._live_terminal_session(wt.path)
+
+            def fn(th: dict, head=head, dirty=dirty, prev=prev, wt=wt, live=live) -> bool:
+                old = prev.get("head_sha")
+                th["sync"] = {**self._sync_state(wt, check_remote=False), "app_writing": live}
+                if old and head and old != head and not any(c.get("candidate_sha") == head for c in th.get("checkpoints", [])):
+                    paths = wt.changed_between(old, head)
+                    self._add_checkpoint(th, wt, old, head, paths, "app", None, "앱(터미널)에서 저장한 새 버전")
+                    self._thread_msg(th, "system", "checkpoint", f"앱에서 새 버전을 저장했습니다 ({old[:10]} → {head[:10]}, {len(paths)} 파일). 이전 검토는 이 버전에 적용되지 않습니다.", extra={"checkpoint_sha": head})
+                elif dirty and not prev.get("dirty_paths"):
+                    self._thread_msg(th, "system", "progress", f"앱에서 수정 중 · 아직 커밋 안 됨 ({len(dirty)} 파일: {', '.join(dirty[:4])}{' 외' if len(dirty) > 4 else ''})")
+                return True
+            self.ledger.thread_mutate(tid, fn)
+
+    # ----- 로드맵 (읽기 전용 연결)
+    def refresh_roadmaps(self, ws: dict):
+        if time.time() - getattr(self, "_last_roadmap", 0) < 300:
+            return
+        self._last_roadmap = time.time()
+        for proj in ws.get("projects", []):
+            path = str(proj.get("roadmap_path") or "").strip().replace("\\", "/")
+            if not path or proj.get("archived"):
+                continue
+            try:
+                pdir = self.project_dir(proj["project_id"], ws)
+            except Exception:  # noqa: BLE001
+                continue
+            if not (pdir / ".git").exists():
+                continue
+            code, blob = self._git(pdir, "rev-parse", f"HEAD:{path}")
+            if code != 0:
+                rm = {"path": path, "parse_status": "missing", "error": f"HEAD 에 {path} 가 없습니다.", "checked_at": now_iso()}
+            else:
+                prev = proj.get("roadmap") or {}
+                if prev.get("blob_sha") == blob.strip():
+                    continue
+                code, text = self._git(pdir, "show", f"HEAD:{path}")
+                rm = v2.parse_roadmap(text if code == 0 else "", path, blob.strip())
+                rm["checked_at"] = now_iso()
+                _, head = self._git(pdir, "rev-parse", "HEAD")
+                rm["source_commit"] = head.strip()
+            def fn(w: dict, pid=proj["project_id"], rm=rm) -> bool:
+                for p in w.get("projects", []):
+                    if p.get("project_id") == pid:
+                        p["roadmap"] = rm
+                        return True
+                return False
+            self.ledger.mutate(fn)
+            log(f"로드맵 읽기 {proj.get('name')}: {rm.get('parse_status')} ({rm.get('item_count', 0)} 항목)")
 
     # ----- 관찰형 실행 기록 (터미널에서 직접 실행한 Claude Code)
     def record_observed(self, sessions: list):
@@ -1256,6 +1624,8 @@ class Runner:
                     self.check_active(ws)
                     self.handle_publish(ws)
                     self.check_chat(ws)
+                    self.sync_threads(ws)
+                    self.refresh_roadmaps(ws)
                     if self.active is None and self.chat is None:
                         picked = self.pick_task(ws)
                         if picked:

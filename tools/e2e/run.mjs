@@ -239,6 +239,19 @@ async function main() {
       const page = await newPage(browser);
       await page.goto(`${BASE}/#/projects`, { waitUntil: 'networkidle' }); await sleep(300);
       await page.fill('form.stack input >> nth=0', 'CBSR'); await page.click('form.stack button[type=submit]'); await sleep(300);
+      // V2: 프로젝트 개요·로드맵 화면과 정책 화면 (로컬 모드 = Runner 미연결 → '미확인' 표시, 차단 주장 없음)
+      const pid = await page.evaluate(() => JSON.parse(localStorage.getItem('ai-office.local-workspace.v1')).projects[0].project_id);
+      await page.goto(`${BASE}/#/projects/${encodeURIComponent(pid)}`); await sleep(300);
+      const detailOk = (await page.locator('h1').first().textContent()) === 'CBSR' && (await page.locator('text=아직 연결하지 않았습니다').count()) === 1;
+      record('V2-ROADMAP-UI', '프로젝트 개요 화면: 로드맵 미연결을 빈 계획으로 꾸미지 않고 "연결 안 됨"으로 표시', detailOk);
+      await shot(page, 'v2-project-detail');
+      await page.goto(`${BASE}/#/settings/policies`); await sleep(300);
+      const polOk = (await page.locator('text=미확인').count()) >= 1 && (await page.locator('.policy-table').count()) === 0;
+      record('V2-POLICY-UI', '정책 화면: Runner 미연결이면 허용 목록을 꾸며 내지 않고 미확인으로 표시', polOk);
+      await shot(page, 'v2-policies-unconfirmed');
+      await page.goto(`${BASE}/#/chat`); await sleep(300);
+      const chatOk = (await page.locator('text=Firebase 공용 장부에서만').count()) === 1;
+      record('V2-CHAT-GATE', '대화방은 로컬 모드에서 열리지 않고 Firebase 전용임을 명시', chatOk);
       await page.goto(`${BASE}/#/settings/team`); await sleep(300);
       await page.fill('form.stack input >> nth=0', 'GPT'); await page.fill('form.stack input >> nth=1', '연구·설계·검수');
       await page.selectOption('form.stack select', 'external'); await page.click('form.stack button[type=submit]'); await sleep(300);

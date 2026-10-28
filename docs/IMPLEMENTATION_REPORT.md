@@ -153,3 +153,6 @@ e2e 가 확인한 핵심: 대시보드와 자리 드로어가 같은 task ID(`DE
 - 대화 화면 반영 버튼이 `source → 빌드 → main` 식으로 흐름을 보여 준다.
 
 **검증:** vitest 51 통과, tsc·build 통과. 모의 저장소(source/main 두 가지, 작은 build_site.py)로 Runner 메서드 직접 실행: main→source 전환, 더러운 main 은 stash, source 커밋에 app/site 제외, 빌드 후 main 에 결과만 커밋, worktree 정리 확인 (실제 연결 아님 · 리눅스 시뮬레이션). 윈도우 실동작은 소유자 PC 에서 확인 필요.
+
+## 2026-10-28 (밤) — V2 대화 중심 업무실 1차
+자세한 보고: `docs/V2_REPORT.md`. 요약: 논의/실행/검토 모드, 대화방 전용 worktree·office 가지 체크포인트(명시 파일·보호 파일 제외), 앱 변경 감지(미커밋/새 커밋), 고정 SHA 검토 + JSON 판정 계약, findings 전문·맥락 묶음을 넣은 자동 보완(최대 2회)·재검토, 체크포인트/원격 공유/반영 분리, 메시지 하위 컬렉션 이전, 정책 데이터 단일 출처, workspace UID 고정, 로드맵 읽기 전용 연결. 모의 28/28 · vitest 53 · e2e 31 통과. 소유자 PC 실측은 아직.

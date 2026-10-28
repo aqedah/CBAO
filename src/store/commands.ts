@@ -17,7 +17,7 @@ export type Command =
   | { type: 'register_member'; display_name: string; role_label: string; execution_mode: ExecutionMode; tool_label: string; idempotency_key: string }
   | { type: 'update_member'; member_id: string; patch: Partial<Pick<Member, 'display_name' | 'role_label' | 'execution_mode' | 'tool_label'>> }
   | { type: 'register_project'; name: string; purpose: string; repo_reference: string | null; idempotency_key: string }
-  | { type: 'update_project'; project_id: string; patch: Partial<Pick<Project, 'name' | 'purpose' | 'repo_reference' | 'archived' | 'work_branch' | 'build_command' | 'deploy_dir' | 'deploy_branch'>> }
+  | { type: 'update_project'; project_id: string; patch: Partial<Pick<Project, 'name' | 'purpose' | 'repo_reference' | 'archived' | 'work_branch' | 'build_command' | 'deploy_dir' | 'deploy_branch' | 'roadmap_path'>> }
   | { type: 'update_ui'; patch: Partial<UiSettings> }
   | { type: 'mark_task_status'; task_id: string; status: Task['status']; expected_revision: number }
   | { type: 'request_run'; task_id: string; expected_revision: number; idempotency_key: string }
@@ -186,6 +186,7 @@ export function applyCommand(ws: Workspace, cmd: Command, nowIso: string): Works
         if (v && !/^[\w./-]{1,100}$/.test(v)) throw new CommandError('가지 이름이 올바르지 않습니다.', 'invalid');
       }
       if (cmd.patch.deploy_dir && !/^[\w./-]{1,100}$/.test(cmd.patch.deploy_dir)) throw new CommandError('배포 폴더 이름이 올바르지 않습니다.', 'invalid');
+      if (cmd.patch.roadmap_path && (!/^[\w./ -]{1,200}$/.test(cmd.patch.roadmap_path) || cmd.patch.roadmap_path.includes('..'))) throw new CommandError('로드맵 경로가 올바르지 않습니다 (저장소 안의 상대 경로).', 'invalid');
       if (cmd.patch.build_command && /[;&|`$<>]/.test(cmd.patch.build_command)) throw new CommandError('빌드 명령에는 ; & | ` $ < > 를 쓸 수 없습니다.', 'invalid');
       return bump({ ...ws, projects: ws.projects.map(p => p.project_id === cmd.project_id ? { ...p, ...cmd.patch } : p) }, nowIso);
     }

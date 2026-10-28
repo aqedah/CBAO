@@ -14,7 +14,9 @@
     "typecheck": "tsc -b"
   },
   "dependencies": {
+    "dompurify": "^3.2.6",
     "firebase": "^13.1.0",
+    "marked": "^15.0.12",
     "pixi.js": "8.21.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"

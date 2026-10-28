@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
+import { href } from '../../app/router';
 import { getStore, useStoreState } from '../../store/workspaceStore';
 import { CommandError, newIdempotencyKey } from '../../store/commands';
 
 const CANDIDATES = ['MILAL', 'MILALWV', 'CBSR', 'CBWP'];
 
-function ProjectRow({ p }: { p: { project_id: string; name: string; purpose: string; repo_reference: string | null; archived: boolean; work_branch?: string | null; build_command?: string | null; deploy_dir?: string | null; deploy_branch?: string | null } }) {
+function ProjectRow({ p }: { p: { project_id: string; name: string; purpose: string; repo_reference: string | null; archived: boolean; work_branch?: string | null; build_command?: string | null; deploy_dir?: string | null; deploy_branch?: string | null; roadmap_path?: string | null; roadmap?: { parse_status: string; item_count?: number; done_count?: number } | null } }) {
   const [edit, setEdit] = useState(false);
   const [purpose, setPurpose] = useState(p.purpose);
   const [repo, setRepo] = useState(p.repo_reference ?? '');
@@ -12,17 +13,18 @@ function ProjectRow({ p }: { p: { project_id: string; name: string; purpose: str
   const [buildCmd, setBuildCmd] = useState(p.build_command ?? '');
   const [deployDir, setDeployDir] = useState(p.deploy_dir ?? '');
   const [deployBranch, setDeployBranch] = useState(p.deploy_branch ?? '');
+  const [roadmapPath, setRoadmapPath] = useState(p.roadmap_path ?? '');
   const [err, setErr] = useState<string | null>(null);
   const save = async () => {
     setErr(null);
-    try { await getStore().command({ type: 'update_project', project_id: p.project_id, patch: { purpose, repo_reference: repo.trim() || null, work_branch: workBranch.trim() || null, build_command: buildCmd.trim() || null, deploy_dir: deployDir.trim() || null, deploy_branch: deployBranch.trim() || null } }); setEdit(false); }
+    try { await getStore().command({ type: 'update_project', project_id: p.project_id, patch: { purpose, repo_reference: repo.trim() || null, work_branch: workBranch.trim() || null, build_command: buildCmd.trim() || null, deploy_dir: deployDir.trim() || null, deploy_branch: deployBranch.trim() || null, roadmap_path: roadmapPath.trim() || null } }); setEdit(false); }
     catch (e) { setErr(e instanceof CommandError ? e.message : '저장 실패'); }
   };
   return (
     <li>
       <div className="row"><strong>{p.name}</strong> <span className="meta">{p.project_id}</span><span className="spacer" />
         <button type="button" className="btn small" onClick={() => setEdit(v => !v)}>{edit ? '취소' : '수정'}</button></div>
-      {!edit && <div className="meta">{p.purpose || '목적 없음'} · 저장소 {p.repo_reference ?? '없음 (심부름꾼은 빈 폴더에서 시작)'} · 작업 가지 {p.work_branch || 'main'}{p.build_command ? ` · 빌드 "${p.build_command}"` : ''}{p.deploy_dir ? ` · 배포 ${p.deploy_dir}/ → ${p.deploy_branch || 'main'}` : ''}</div>}
+      {!edit && <div className="meta">{p.purpose || '목적 없음'} · 저장소 {p.repo_reference ?? '없음 (심부름꾼은 빈 폴더에서 시작)'} · 작업 가지 {p.work_branch || 'main'}{p.build_command ? ` · 빌드 "${p.build_command}"` : ''}{p.deploy_dir ? ` · 배포 ${p.deploy_dir}/ → ${p.deploy_branch || 'main'}` : ''}{p.roadmap_path ? ` · 로드맵 ${p.roadmap_path}${p.roadmap ? ` (${p.roadmap.parse_status === 'parsed' ? `${p.roadmap.done_count ?? 0}/${p.roadmap.item_count ?? 0}` : p.roadmap.parse_status})` : ' (아직 안 읽음)'}` : ''} · <a href={href(`/projects/${p.project_id}`)}>개요·로드맵</a></div>}
       {edit && (
         <div className="stack" style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
           <input value={purpose} onChange={e => setPurpose(e.target.value)} placeholder="목적" style={{ padding: 8, border: '1px solid var(--line)', borderRadius: 6 }} />
@@ -34,6 +36,7 @@ function ProjectRow({ p }: { p: { project_id: string; name: string; purpose: str
             <input value={deployDir} onChange={e => setDeployDir(e.target.value)} placeholder="배포 폴더 (예: site)" style={{ padding: 8, border: '1px solid var(--line)', borderRadius: 6, flex: 1 }} />
             <input value={deployBranch} onChange={e => setDeployBranch(e.target.value)} placeholder="배포 가지 (비우면 main)" style={{ padding: 8, border: '1px solid var(--line)', borderRadius: 6, flex: 1 }} />
           </div>
+          <input value={roadmapPath} onChange={e => setRoadmapPath(e.target.value)} placeholder="기존 로드맵 문서 경로 (저장소 안, 예: docs/ROADMAP.md · 읽기 전용으로 가져옴)" style={{ padding: 8, border: '1px solid var(--line)', borderRadius: 6 }} />
           {err && <div className="notice error">{err}</div>}
           <div className="row"><button type="button" className="btn primary small" onClick={() => void save()}>저장</button></div>
         </div>
