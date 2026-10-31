@@ -195,6 +195,16 @@ export async function recordDecision(threadId: string, text: string) {
     tx.set(ref, clean({ ...t, context: { ...ctx, version, decisions }, needs_owner: null, updated_at: nowIso() }));
   });
 }
+export async function renameThread(threadId: string, title: string) {
+  const { f, ref } = await threadRef(threadId);
+  await f.updateDoc(ref, { title: title.trim().slice(0, 120) || '제목 없음', updated_at: nowIso() });
+}
+/** 체크포인트 변경 내용 (Runner 가 threads/{id}/diffs/{sha} 에 둔 것). 없으면 null. */
+export async function loadDiff(threadId: string, sha: string): Promise<import('../domain/chat').CheckpointDiff | null> {
+  const { fs: f, db } = await fs();
+  const snap = await f.getDoc(f.doc(db, 'workspaces', uid(), 'threads', threadId, 'diffs', sha));
+  return snap.exists() ? (snap.data() as import('../domain/chat').CheckpointDiff) : null;
+}
 export async function cancelPending(threadId: string) {
   const { f, db, ref } = await threadRef(threadId);
   await f.runTransaction(db, async tx => {

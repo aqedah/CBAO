@@ -5,6 +5,7 @@ import { EVIDENCE_LABEL, EXEC_MODE_LABEL, TASK_STATUS_LABEL } from '../../domain
 import { OfficeHeader } from '../office-shared/OfficeHeader';
 import { useMemberViews, useOfficeSnapshot, useProjectFilter } from '../office-shared/useOfficeSnapshot';
 import { useThreads } from '../../store/threadStore';
+import { useAttention } from '../chat/attention';
 import { currentSection } from '../chat/ChatPage';
 
 /** S10 메인 대시보드. 우선순위: 사용자 결정 → 팀원 현황 → 진행 작업 → 최근 결과. */
@@ -17,6 +18,7 @@ export function DashboardPage() {
   const now = useServerNow();
   const source = useStoreState(s => s.source);
   const { threads } = useThreads();
+  const attentionAll = useAttention(threads);
 
   if (!ws) {
     return (
@@ -29,6 +31,7 @@ export function DashboardPage() {
   }
 
   const inProject = (pid: string) => !project || pid === project;
+  const attention = attentionAll.filter(a => inProject(threads.find(t => t.thread_id === a.thread_id)?.project_id ?? ''));
   const decisions = ws.approvals.filter(a => a.decision === null && inProject(a.project_id)).sort((a, b) => b.sequence - a.sequence);
   const openTasks = ws.tasks.filter(t => inProject(t.project_id) && !['done', 'cancelled', 'draft'].includes(t.status)).sort((a, b) => b.sequence - a.sequence);
   const recent = ws.artifacts.filter(a => { const t = ws.tasks.find(x => x.task_id === a.task_id); return t && inProject(t.project_id); }).slice(-5).reverse();
@@ -39,6 +42,18 @@ export function DashboardPage() {
   return (
     <>
       <OfficeHeader view="dashboard" />
+      {source === 'firebase' && attention.length > 0 && (
+        <section className="card" aria-labelledby="h-attention" style={{ borderColor: 'var(--attention)' }}>
+          <h2 id="h-attention">내 차례 <Badge tone="count">{attention.length}</Badge></h2>
+          <p className="meta">AI 가 멈추고 나를 기다리는 것만 모았습니다. 자동으로 처리된 일은 여기 없습니다.</p>
+          <ul className="list">
+            {attention.slice(0, 6).map(a => {
+              const t = threads.find(x => x.thread_id === a.thread_id);
+              return <li key={`${a.thread_id}-${a.kind}`}><div className="row"><strong>{ws.projects.find(p => p.project_id === t?.project_id)?.name ?? t?.project_id}</strong> / {t?.title}<span className="spacer" /><a className="btn small primary" href={href(`/chat/${a.thread_id}`)}>열기</a></div><div className="meta">{a.label} · {formatAge(a.at, now)}</div></li>;
+            })}
+          </ul>
+        </section>
+      )}
       {source === 'firebase' && (
         <section className="card" aria-labelledby="h-continue">
           <h2 id="h-continue">이어서 하기</h2>

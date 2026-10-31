@@ -189,3 +189,16 @@ form.stack textarea { min-height: 80px; }
 .cap-supported { color: var(--active); } .cap-unsupported { color: var(--muted); } .cap-unverified { color: var(--attention); }
 @media (max-width: 1100px) { .chat-layout.with-panel { grid-template-columns: 240px minmax(0, 1fr); } .chat-panel { grid-column: 1 / -1; position: static; max-height: none; } }
 @media (max-width: 900px) { .chat-layout.with-panel { grid-template-columns: 1fr; } }
+
+/* ---- 변경 보기 (diff) ---- */
+.diff-view { border: 1px solid var(--line); border-radius: 6px; margin-top: 6px; overflow: hidden; }
+.diff-stat { margin: 0; padding: 6px 8px; font-size: .75rem; background: var(--surface-2); white-space: pre-wrap; }
+.diff-body { margin: 0; padding: 6px 8px; font-size: .75rem; max-height: 320px; overflow: auto; white-space: pre; line-height: 1.4; }
+.diff-body .add { background: #e4f5ea; color: #1d5c3a; display: block; }
+.diff-body .del { background: #fbe4e4; color: #8a2b2b; display: block; }
+.diff-body .hunk { color: #5b6a8a; display: block; }
+.diff-body .file { font-weight: 600; display: block; margin-top: 4px; }
+/* ---- 픽셀 사무실 말풍선 ---- */
+.nameplate .np-bubble { margin-top: 3px; padding: 3px 6px; border-radius: 8px; background: #fff; border: 1px solid var(--line); font-size: .72rem; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nameplate .np-bubble.question { border-color: var(--attention); background: #fff7e6; }
+.nameplate .np-bubble.error { border-color: var(--error); background: #f8e5e5; }

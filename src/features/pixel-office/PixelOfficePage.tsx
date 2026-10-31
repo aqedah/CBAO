@@ -15,6 +15,8 @@ import { MemberDrawer } from './MemberDrawer';
 import { OfficeAccessibleList } from './OfficeAccessibleList';
 import { SCENE, type SceneAction } from './config/sceneTypes';
 import { sceneToClient } from './renderer/projectCoordinates';
+import { useThreads } from '../../store/threadStore';
+import { memberBubbles } from './bubbles';
 
 /** Canvas action enum → 기존 라우트. JSON 의 문자열을 임의 API 로 실행하지 않는다. */
 const ACTION_ROUTE: Record<SceneAction, string | null> = {
@@ -56,6 +58,8 @@ export function PixelOfficePage() {
   const env = useMemo(() => ({ reducedMotion: reduced, hidden, motionEnabled }), [reduced, hidden, motionEnabled]);
   const views = useMemberViews(snapshot, env);
   const now = useServerNow();
+  const { threads } = useThreads();
+  const bubbles = useMemo(() => memberBubbles(threads), [threads]);
 
   const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
   const [hoveredSeat, setHoveredSeat] = useState<string | null>(null);
@@ -137,7 +141,7 @@ export function PixelOfficePage() {
                     {models.map(m => {
                       const p = at(anchors.seat(m.seat.id), avatarDx + m.seat.label_offset[0], -70);
                       const expanded = m.visual.selected || m.visual.hovered;
-                      return <MemberNameplate key={m.seat.id} model={m} x={p.x} y={p.y} nowMs={now} compact={!expanded} mini={mini && !expanded} onSelect={() => selectSeat(m.seat.id)} />;
+                      return <MemberNameplate key={m.seat.id} model={m} x={p.x} y={p.y} nowMs={now} compact={!expanded} mini={mini && !expanded} bubble={m.member ? bubbles[m.member.member_id] : undefined} onSelect={() => selectSeat(m.seat.id)} />;
                     })}
                     {[
                       { id: 'owner-desk', label: '총괄·승인석', badge: approvalCount, dy: -66 },

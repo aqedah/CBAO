@@ -1,6 +1,8 @@
 import { getStore, useStoreState } from '../../store/workspaceStore';
 import { formatTime } from '../../shared/ui';
 import type { RunnerPolicy } from '../../domain/types';
+import { useState } from 'react';
+import { notifyEnabled, setNotifyEnabled } from '../chat/attention';
 
 /**
  * 정책. 실행 정책은 Runner 가 heartbeat 에 실어 보낸 실제 강제 데이터(policy)를 그대로 보여 준다.
@@ -13,6 +15,7 @@ export function PoliciesPage() {
   const device = ws.devices.find(d => d.policy) ?? ws.devices[0];
   const policy: RunnerPolicy | null | undefined = device?.policy;
   const live = device?.connection_state === 'healthy';
+  const [notify, setNotify] = useState(notifyEnabled());
   return (
     <>
       <div className="page-head"><h1>정책</h1></div>
@@ -66,6 +69,7 @@ export function PoliciesPage() {
         <h2>화면 설정 (사용자별 UI, 서버 권한 대체 아님)</h2>
         <label className="row"><input type="checkbox" checked={ws.ui.motion_enabled} onChange={e => set({ motion_enabled: e.target.checked })} /> 픽셀 사무실 움직임 (확인된 실행에서만 동작)</label>
         <label className="row"><input type="checkbox" checked={ws.ui.privacy_mode} onChange={e => set({ privacy_mode: e.target.checked })} /> 업무명 숨기기 (촬영·화면 공유용: 프로젝트명·작업명 숨김, 역할·상태만 표시)</label>
+        <label className="row"><input type="checkbox" checked={notify} onChange={e => void setNotifyEnabled(e.target.checked).then(setNotify)} /> 브라우저 알림 — 다른 탭을 보는 동안 AI 가 멈추고 내 차례가 되면 알림 (이 브라우저에서만, 첫 켜기 때 권한 요청)</label>
         <label className="row"><input type="checkbox" checked={ws.ui.sound_enabled} onChange={e => set({ sound_enabled: e.target.checked })} /> 소리 (기본 꺼짐 · 이 빌드에는 재생할 소리 에셋이 없습니다)</label>
       </section>
     </>

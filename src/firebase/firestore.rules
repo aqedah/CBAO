@@ -27,6 +27,11 @@ service cloud.firestore {
           allow read, create, update: if isOwner() && request.auth.uid == uid;
           allow delete: if false;
         }
+        // 체크포인트별 변경 내용 (Runner 만 쓴다. 웹은 읽기만)
+        match /diffs/{sha} {
+          allow read: if isOwner() && request.auth.uid == uid;
+          allow write: if false;
+        }
       }
     }
     // 그 밖의 모든 경로는 차단 (Runner 이벤트 등은 다음 단계에서 별도 규칙으로 연다)

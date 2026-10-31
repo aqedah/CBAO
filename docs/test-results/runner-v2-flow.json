@@ -1,5 +1,5 @@
 {
- "ran_at": "2026-10-28T22:54:10",
+ "ran_at": "2026-10-31T21:48:23",
  "platform": "linux",
  "results": [
   {
@@ -21,6 +21,11 @@
    "name": "SYNC-01 실행 뒤 체크포인트가 office 가지에 생기고 main/source 는 그대로",
    "pass": true,
    "detail": "['hello.txt']"
+  },
+  {
+   "name": "체크포인트마다 변경 내용(diff)이 별도 문서에 저장됨",
+   "pass": true,
+   "detail": ""
   },
   {
    "name": "보호 파일(.env)은 체크포인트에서 제외",
@@ -45,7 +50,7 @@
   {
    "name": "SYNC-03 앱의 미커밋 변경을 dirty 로 표시, 덮어쓰지 않음",
    "pass": true,
-   "detail": "{'branch': 'office/chat-1', 'head_sha': 'a6f959086081cc289544e1cac92a9718cc7b709b', 'dirty_paths': ['hello.txt'], 'checked_at': '2026-10-28T13:54:08.100Z', 'remote': 'unchecked', 'worktree': '/tmp/cbao-v2-1bfxggv4/worktrees/Demo/chat-1', 'app_writing': False}"
+   "detail": "{'branch': 'office/chat-1', 'head_sha': 'c836c4b4eecea73e7c8fc8c08c7db8120f0e4431', 'dirty_paths': ['hello.txt'], 'checked_at': '2026-10-31T12:48:20.500Z', 'remote': 'unchecked', 'worktree': '/tmp/cbao-v2-eo8os2cj/worktrees/Demo/chat-1', 'app_writing': False}"
   },
   {
    "name": "SYNC-04 앱 커밋을 app 체크포인트로 감지",
@@ -55,7 +60,7 @@
   {
    "name": "실행 뒤 자동 검토가 고정 SHA 를 대상으로 큐에 들어감",
    "pass": true,
-   "detail": "[('member', 'result', 'hello.txt 를 만들었습니다.\\n변경한 파일: hello.txt\\n질문: 인사말 언어는 한국어로 할까요?'), ('member', 'question', '인사말 언어는 한국어로 할까요?'), ('system', 'checkpoint', '체크포인트 e1efb17953 저장 — 1 파일. 아직 이 PC 에만 있습니다.'), ('system', 'chat', '자동 검토 요청 → m-claude-reviewer (대상 e1efb17953, 읽기 전용, 1번째)')]"
+   "detail": "[('member', 'result', 'hello.txt 를 만들었습니다.\\n변경한 파일: hello.txt\\n질문: 인사말 언어는 한국어로 할까요?'), ('member', 'question', '인사말 언어는 한국어로 할까요?'), ('system', 'checkpoint', '체크포인트 7aed242bba 저장 — 1 파일. 아직 이 PC 에만 있습니다.'), ('system', 'chat', '자동 검토 요청 → m-claude-reviewer (대상 7aed242bba, 읽기 전용, 1번째)')]"
   },
   {
    "name": "REVIEW-02 '문제 없음' 문자열이 있어도 JSON verdict 로 판정",

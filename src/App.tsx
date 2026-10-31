@@ -17,6 +17,8 @@ import { TeamPage } from './features/settings/TeamPage';
 import { PoliciesPage } from './features/settings/PoliciesPage';
 import { ExternalReportPage } from './features/tasks/ExternalReportPage';
 import { ChatPage } from './features/chat/ChatPage';
+import { useThreads } from './store/threadStore';
+import { useAttention, useAttentionNotifications } from './features/chat/attention';
 
 // 픽셀 사무실은 라우트를 열 때만 렌더러·에셋을 불러온다.
 const PixelOfficePage = lazy(() => import('./features/pixel-office/PixelOfficePage').then(m => ({ default: m.PixelOfficePage })));
@@ -46,6 +48,9 @@ export default function App() {
   }, [route.path]);
 
   const pending = ws ? ws.approvals.filter(a => a.decision === null).length : 0;
+  const { threads, loaded: threadsLoaded } = useThreads();
+  const attention = useAttention(threads);
+  useAttentionNotifications(attention, threads, threadsLoaded);
   const path = route.path;
   const is = (p: string) => path === p || path.startsWith(p + '/');
 
@@ -74,7 +79,7 @@ export default function App() {
       <nav className="app-nav" aria-label="주 메뉴">
         <div className="brand">바이브코딩인력사무소</div>
         <NavLink to="/office" current={is('/office')}>사무실</NavLink>
-        <NavLink to="/chat" current={is('/chat')}>대화</NavLink>
+        <NavLink to="/chat" current={is('/chat')} badge={attention.length}>대화</NavLink>
         <NavLink to="/projects" current={is('/projects')}>프로젝트</NavLink>
         <NavLink to="/tasks" current={is('/tasks')}>작업함</NavLink>
         <NavLink to="/approvals" current={is('/approvals')} badge={pending}>승인함</NavLink>

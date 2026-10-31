@@ -6,9 +6,9 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { href, navigate, useRoute } from '../../app/router';
 import { useStoreState } from '../../store/workspaceStore';
-import { useThreads, useThreadMessages, createThread, sendOwnerMessage, requestReview, requestPublish, requestCheckpoint, requestShare, setAutoReview, cancelPending, recordDecision, dropNextMessage } from '../../store/threadStore';
+import { useThreads, useThreadMessages, createThread, sendOwnerMessage, requestReview, requestPublish, requestCheckpoint, requestShare, setAutoReview, cancelPending, recordDecision, dropNextMessage, renameThread, loadDiff } from '../../store/threadStore';
 import { Badge, formatAge, formatTime, useServerNow } from '../../shared/ui';
-import type { ChatMessage, Thread, Review, Checkpoint } from '../../domain/chat';
+import type { ChatMessage, Thread, Review, Checkpoint, CheckpointDiff } from '../../domain/chat';
 import { MAX_FIX_ROUNDS, MODE_LABEL, VERDICT_LABEL, newId, reviewIsCurrent } from '../../domain/chat';
 import type { Project, RunnerDevice } from '../../domain/types';
 import { CommandError } from '../../store/commands';
@@ -180,9 +180,10 @@ function ThreadHead({ thread, project, memberName, busy, act, onTogglePanel, pan
   const cps = thread.checkpoints ?? [];
   const last = cps[cps.length - 1];
   const saved = last ? (last.remote_sync_status === 'pushed' && sync?.remote !== 'ahead' ? '다른 PC 에서도 이어갈 수 있음' : '이 PC 에 저장됨') : '저장된 버전 없음';
+  const rename = () => { const t = window.prompt('대화방 제목 (가지 이름 office/… 은 바뀌지 않습니다)', thread.title); if (t && t.trim() && t.trim() !== thread.title) void act(() => renameThread(thread.thread_id, t), '제목을 바꿨습니다.'); };
   return (
     <div className="chat-head row wrap">
-      <strong>{thread.title}</strong>
+      <strong>{thread.title}</strong><button type="button" className="btn small" onClick={rename} title="제목 바꾸기" aria-label="제목 바꾸기">✎</button>
       <span className="meta">{project?.name ?? thread.project_id}{project?.repo_reference ? ` · ${project.repo_reference}` : ''}{sync?.branch ? ` · ${sync.branch}` : ''}</span>
       <Badge tone={dirty ? 'attention' : last ? 'active' : 'muted'}>{dirty ? `앱에서 수정됨 · 아직 커밋 안 됨 (${sync!.dirty_paths.length})` : saved}</Badge>
       {sync?.app_writing && <Badge tone="attention">앱에서 작업 중 · 논의만</Badge>}
@@ -323,7 +324,7 @@ function ContextPanel({ thread, project, device, memberName, busy, act, now }: {
 
       <h3>체크포인트 ({cps.length})</h3>
       {cps.length === 0 ? <p className="meta">없음</p> : (
-        <ul className="list small">{cps.slice(-5).reverse().map(c => <li key={c.checkpoint_id}><CheckpointRow c={c} head={head} /></li>)}</ul>
+        <ul className="list small">{cps.slice(-5).reverse().map(c => <li key={c.checkpoint_id}><CheckpointRow c={c} head={head} threadId={thread.thread_id} /></li>)}</ul>
       )}
 
       <h3>검토 ({reviews.length})</h3>
@@ -355,12 +356,30 @@ export function currentSection(sections: Array<{ title: string; items: Array<{ s
 function remoteLabel(r: string | undefined): string {
   return { synced: '원격과 같음', ahead: '이 PC 가 앞섬 (원격 공유 필요)', behind: '원격이 앞섬 (앱에서 저장한 버전 있음)', diverged: '서로 갈라짐 · 조정 필요', local_only: '이 PC 에만 있음', unknown: '원격 확인 안 됨', unchecked: '원격 미확인' }[r ?? 'unchecked'] ?? r ?? '—';
 }
-function CheckpointRow({ c, head }: { c: Checkpoint; head: string | null }) {
+function CheckpointRow({ c, head, threadId }: { c: Checkpoint; head: string | null; threadId: string }) {
+  const [diff, setDiff] = useState<CheckpointDiff | null | 'loading' | 'missing'>(null);
+  const open = async () => {
+    if (diff && diff !== 'missing') { setDiff(null); return; }
+    setDiff('loading');
+    try { setDiff((await loadDiff(threadId, c.candidate_sha)) ?? 'missing'); } catch { setDiff('missing'); }
+  };
   return (
     <>
-      <div className="row wrap"><code>{c.candidate_sha.slice(0, 10)}</code> <Badge tone={c.origin === 'app' ? 'attention' : 'muted'}>{c.origin === 'app' ? '앱에서 저장' : '오피스'}</Badge> {c.candidate_sha === head && <Badge tone="active">현재</Badge>} <span className="meta">{c.remote_sync_status === 'pushed' ? '공유됨' : '이 PC 만'} · {formatTime(c.at)}</span></div>
+      <div className="row wrap"><code>{c.candidate_sha.slice(0, 10)}</code> <Badge tone={c.origin === 'app' ? 'attention' : 'muted'}>{c.origin === 'app' ? '앱에서 저장' : '오피스'}</Badge> {c.candidate_sha === head && <Badge tone="active">현재</Badge>} <span className="meta">{c.remote_sync_status === 'pushed' ? '공유됨' : '이 PC 만'} · {formatTime(c.at)}</span> <button type="button" className="btn small" onClick={() => void open()}>{diff && diff !== 'missing' && diff !== 'loading' ? '닫기' : '변경 보기'}</button></div>
       <div className="meta">{c.changed_paths.slice(0, 4).join(', ')}{c.changed_paths.length > 4 ? ` 외 ${c.changed_paths.length - 4}` : ''}{c.note ? ` · ${c.note}` : ''}</div>
+      {diff === 'loading' && <div className="meta">불러오는 중…</div>}
+      {diff === 'missing' && <div className="meta">변경 내용이 저장되지 않은 체크포인트입니다 (심부름꾼 0.8.1 이전).</div>}
+      {diff && diff !== 'loading' && diff !== 'missing' && <DiffView d={diff} />}
     </>
+  );
+}
+function DiffView({ d }: { d: CheckpointDiff }) {
+  return (
+    <div className="diff-view">
+      <pre className="diff-stat">{d.stat}</pre>
+      <pre className="diff-body">{d.diff.split('\n').map((l, i) => <span key={i} className={l.startsWith('+') && !l.startsWith('+++') ? 'add' : l.startsWith('-') && !l.startsWith('---') ? 'del' : l.startsWith('@@') ? 'hunk' : l.startsWith('diff ') ? 'file' : ''}>{l}{'\n'}</span>)}</pre>
+      {d.truncated && <div className="meta">너무 길어 일부만 보입니다. 전체는 PC 의 작업 폴더에서 <code>git show {d.sha.slice(0, 10)}</code></div>}
+    </div>
   );
 }
 function ReviewRow({ r, head, memberName }: { r: Review; head: string | null; memberName: NameFn }) {

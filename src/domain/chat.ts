@@ -53,8 +53,9 @@ export interface Review {
 }
 export interface Checkpoint {
   checkpoint_id: string; branch: string; base_sha: string | null; candidate_sha: string; changed_paths: string[];
-  origin: 'office' | 'app'; run_id?: string | null; at: string; remote_sync_status: 'local_only' | 'pushed'; note?: string; context_version?: number;
+  origin: 'office' | 'app'; run_id?: string | null; at: string; remote_sync_status: 'local_only' | 'pushed'; note?: string; context_version?: number; stat?: string;
 }
+export interface CheckpointDiff { sha: string; base_sha: string | null; stat: string; diff: string; truncated: boolean; at: string; origin: string }
 export interface SyncState {
   branch: string; head_sha: string | null; dirty_paths: string[]; checked_at: string;
   remote: 'unknown' | 'unchecked' | 'synced' | 'ahead' | 'behind' | 'diverged' | 'local_only'; worktree: string; app_writing?: boolean;
@@ -127,6 +128,24 @@ export function newId(prefix: string): string {
 }
 
 /** 검토가 현재 코드 버전에 대한 것인가 (stale 플래그와 SHA 비교 둘 다 본다). */
+/** 소유자가 지금 봐야 할 것 — 대시보드 '내 차례' 와 메뉴 배지의 기준. 화면 꾸밈이 아니라 장부 상태에서만 계산한다. */
+export type AttentionKind = 'decision' | 'question' | 'review' | 'app_dirty' | 'publish_failed' | 'error';
+export interface AttentionItem { thread_id: string; kind: AttentionKind; label: string; at: string }
+export function attentionItems(t: Thread): AttentionItem[] {
+  const out: AttentionItem[] = [];
+  if (t.status !== 'idle') return out;
+  if (t.needs_owner) out.push({ thread_id: t.thread_id, kind: 'decision', label: `판단 필요: ${t.needs_owner.reason}`, at: t.needs_owner.at });
+  const lm = t.last_message;
+  if (lm?.kind === 'question') out.push({ thread_id: t.thread_id, kind: 'question', label: `질문: ${lm.text}`, at: lm.at });
+  if (lm?.kind === 'error') out.push({ thread_id: t.thread_id, kind: 'error', label: `오류: ${lm.text}`, at: lm.at });
+  const head = t.sync?.head_sha ?? null;
+  const cur = (t.reviews ?? []).filter(r => reviewIsCurrent(r, head)).slice(-1)[0];
+  if (cur && cur.verdict === 'changes_required' && !t.auto_review_member_id) out.push({ thread_id: t.thread_id, kind: 'review', label: `검토 지적 ${cur.findings.length}건 — 수정 지시 또는 판단`, at: cur.at });
+  if ((t.sync?.dirty_paths?.length ?? 0) > 0) out.push({ thread_id: t.thread_id, kind: 'app_dirty', label: `앱에서 고친 ${t.sync!.dirty_paths.length}개 파일이 아직 저장(커밋) 안 됨`, at: t.sync!.checked_at });
+  if (t.last_publish?.status === 'failed') out.push({ thread_id: t.thread_id, kind: 'publish_failed', label: `반영 실패: ${t.last_publish.message}`, at: t.last_publish.at });
+  return out;
+}
+
 export function reviewIsCurrent(r: Review, headSha: string | null | undefined): boolean {
   return !r.stale && !!headSha && r.target_sha === headSha;
 }

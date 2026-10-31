@@ -43,7 +43,7 @@ RUNS_DIR = BASE / "runs"
 PROJECTS_DIR = BASE / "projects"
 WORKTREES_DIR = BASE / "worktrees"
 ACTIVE_RUN = {"queued", "leased", "starting", "running", "waiting_input", "stopping"}
-VERSION = "0.8.0"
+VERSION = "0.8.1"
 
 
 def now_iso() -> str:
@@ -225,15 +225,17 @@ class Ledger:
         def run(transaction):
             snap = ref.get(transaction=transaction)
             t = snap.to_dict() or {}
-            t.pop("_new_messages", None); t.pop("_patch_messages", None)
+            t.pop("_new_messages", None); t.pop("_patch_messages", None); t.pop("_set_docs", None)
             if fn(t):
                 t["updated_at"] = now_iso()
-                new = t.pop("_new_messages", []); patches = t.pop("_patch_messages", [])
+                new = t.pop("_new_messages", []); patches = t.pop("_patch_messages", []); docs = t.pop("_set_docs", [])
                 transaction.set(ref, t)
                 for m in new:
                     transaction.set(ref.collection("messages").document(m["message_id"]), m)
                 for mid, patch in patches:
                     transaction.set(ref.collection("messages").document(mid), patch, merge=True)
+                for sub, did, data in docs:
+                    transaction.set(ref.collection(sub).document(did), data)
             return t
 
         return run(tx)
@@ -1004,6 +1006,12 @@ class Runner:
             if len(cps) > 30:
                 del cps[:len(cps) - 30]
         t["working_checkpoint_id"] = cp["checkpoint_id"]
+        # 변경 내용(diff)은 대화방 문서가 아니라 threads/{id}/diffs/{sha} 에 따로 둔다 (화면의 '변경 보기')
+        code, stat = self._git(wt.path, "diff", "--stat", f"{base}..{sha}") if base else self._git(wt.path, "show", "--stat", "--format=", sha)
+        code2, diff = self._git(wt.path, "diff", f"{base}..{sha}") if base else self._git(wt.path, "show", "--format=", sha)
+        cp["stat"] = (stat or "")[-1500:]
+        t.setdefault("_set_docs", []).append(("diffs", sha, {"sha": sha, "base_sha": base, "stat": (stat or "")[:4000], "diff": (diff or "")[:200000],
+                                                              "truncated": len(diff or "") > 200000, "at": cp["at"], "origin": origin}))
         cp["context_version"] = v2.bump_context(t, "체크포인트", f"{origin} 에서 {sha[:10]} 저장 — {', '.join(paths[:6])}{' 외' if len(paths) > 6 else ''}")
         # 이전 검토는 다른 버전에 대한 것이 된다
         for r in t.get("reviews", []):

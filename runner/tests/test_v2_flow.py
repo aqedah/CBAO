@@ -41,7 +41,7 @@ class FakeLedger:
         id = "uid-test"
 
     def __init__(self, ws: dict):
-        self.ws = ws; self.threads: dict = {}; self.msgs: dict = {}; self.ref = self._Ref()
+        self.ws = ws; self.threads: dict = {}; self.msgs: dict = {}; self.subdocs: dict = {}; self.ref = self._Ref()
 
     def mutate(self, fn):
         ws = json.loads(json.dumps(self.ws))
@@ -60,9 +60,11 @@ class FakeLedger:
 
     def thread_mutate(self, tid, fn):
         t = json.loads(json.dumps(self.threads.get(tid, {})))
-        t.pop("_new_messages", None); t.pop("_patch_messages", None)
+        t.pop("_new_messages", None); t.pop("_patch_messages", None); t.pop("_set_docs", None)
         if fn(t):
-            new = t.pop("_new_messages", []); patches = t.pop("_patch_messages", [])
+            new = t.pop("_new_messages", []); patches = t.pop("_patch_messages", []); docs = t.pop("_set_docs", [])
+            for sub, did, data in docs:
+                self.subdocs.setdefault((tid, sub), {})[did] = data
             json.dumps(t)  # Firestore 처럼 직렬화 가능해야 한다
             self.threads[tid] = t
             box = self.msgs.setdefault(tid, {})
@@ -185,6 +187,8 @@ def main():
     t = r.ledger.thread_read(tid)
     cp1 = t["checkpoints"][-1]
     check("SYNC-01 실행 뒤 체크포인트가 office 가지에 생기고 main/source 는 그대로", cp1["origin"] == "office" and cp1["changed_paths"] == ["hello.txt"] and git(pdir, "rev-parse", "source")[1] == git(pdir, "rev-parse", "origin/source")[1], str(cp1["changed_paths"]))
+    d1 = r.ledger.subdocs.get((tid, "diffs"), {}).get(cp1["candidate_sha"]) or {}
+    check("체크포인트마다 변경 내용(diff)이 별도 문서에 저장됨", "hello world" in d1.get("diff", "") and "hello.txt" in d1.get("stat", ""))
     check("보호 파일(.env)은 체크포인트에서 제외", ".env" not in git(wt, "show", "--name-only", "--format=", "HEAD")[1])
     check("세션 ID 저장(이어가기 근거)", t["sessions"].get("claude", "").startswith("sess-"))
     check("AI 질문이 질문 카드로 분리", any(k == "question" for _, k, _ in kinds(r, tid)))

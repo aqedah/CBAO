@@ -79,3 +79,22 @@
 - 응답은 토큰 단위 스트리밍이 아니라 5초 간격 진행 요약 중계다. 완료 시 결과 원문(최대 4만 자)을 저장한다.
 - 보호 경로는 고정 목록이며 프로젝트별 정본(MILAL) 보호선은 아직 등록되지 않았다.
 - 픽셀 사무실은 대화방의 run 을 그대로 투영한다(모드 표시 없음). 게시판 로드맵 연결은 아직 없다.
+
+
+## 9. 2026-10-31 추가 — 다른 "AI 사무실" 제품을 참고한 UX 보강
+
+참고한 것 (공개 자료 기준):
+- [Pixel Agents](https://github.com/pablodelucca/pixel-agents): 캐릭터 하나 = 세션 하나, 입력 대기·권한 요청을 말풍선으로, 훅 기반 상태. (우리와 같은 방식. 오케스트레이션·작업판은 그쪽도 '아직'.)
+- [Roundtable 픽셀 사무실 글](https://baeseokjae.github.io/posts/roundtable-pixel-office-replay/): 고정 자리, 어깨 너머로 터미널 보기, 실패는 붉게.
+- [Conductor](https://thenewstack.io/a-hands-on-review-of-conductor-an-ai-parallel-runner-app/) / [conductor.build](https://www.conductor.build/workflows/run-parallel-claude-codes): 작업마다 worktree·가지, diff 뷰어에서 검토한 뒤 합치기. 비판: 작업·가지 이름 관계가 헷갈림.
+- [OpenAI Codex 앱 가이드](https://www.heyuan110.com/posts/ai/2026-07-12-openai-codex-app-guide/): "스레드 = 작업 공간(worktree)", 여러 스레드를 돌려 두고 나중에 돌아와 검토, 인라인 diff·PR 패널, 범위 밖 동작은 묻기.
+- [Pixcode](https://feedbagel.com/post/pixcode), [Agent Office/AI Studio 논의](https://community.openai.com/t/agent-office-ai-studio-the-next-interface-after-chat/1381771): 여러 CLI 를 한 웹에서, "채팅 다음 인터페이스는 사무실".
+
+반영한 것 (모두 장부 상태에서만 계산, 꾸밈 없음):
+1. **내 차례(attention) 받은편지함** — 대시보드 맨 위 카드 + 메뉴 '대화' 배지 + 탭 제목 `(N)`. 항목: 소유자 판단 필요, AI 질문, 자동 검토 꺼진 상태의 수정 필요 지적, 앱에서 고치고 커밋 안 함, 반영 실패, 오류. 실행 중인 방은 '내 차례'가 아니다. (Codex 앱의 "돌려 두고 돌아와서 검토")
+2. **변경 보기(diff)** — 체크포인트마다 Runner 가 `threads/{id}/diffs/{sha}` 에 diff 를 저장(20만 자 한도), 대화방 패널 '변경 보기'로 +/− 색 표시. 반영 전에 눈으로 확인 가능. (Conductor/Codex 의 diff 뷰어)
+3. **브라우저 알림** — 정책 화면에서 켜면, 다른 탭을 보는 동안 새 '내 차례'가 생길 때 알림. 이미 보고 있는 탭에는 띄우지 않음. (Pixel Agents 의 완료/권한 chime 과 같은 역할, 소리 대신 알림)
+4. **픽셀 사무실 말풍선** — 실행 중인 팀원 머리 위에 마지막 진행 한 줄(💬), 나를 기다리면 ✋ 질문, 실패는 ⚠. (Pixel Agents·Roundtable)
+5. **대화방 제목 바꾸기(✎)** — 제목과 가지 이름(office/…)을 분리해 두고, 바꿔도 가지는 그대로임을 명시. (Conductor 비판 반영)
+
+시험: vitest 58 (attention·말풍선 규칙 5개 추가), e2e 31, Runner 모의 29/29 (diff 문서 저장 추가). Runner 0.8.1.
