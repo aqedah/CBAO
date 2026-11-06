@@ -1,32 +1,76 @@
 # 바이브코딩인력사무소 (CBAO — Central Bible AI Office)
 
-배포 주소: https://aqedah.github.io/CBAO/ (GitHub Pages, `main` 기준)
+배포 주소: https://aqedah.github.io/CBAO/ (GitHub Pages, `main` 푸시 때 자동 배포)
 
-사용자 1인이 총괄하는 통합형 AI 사무실의 프론트엔드. 메인 대시보드(`#/office`)와, 같은 업무 데이터를 따뜻한 2.5D 픽셀 장면으로 보여주는 픽셀 사무실(`#/office/room`)을 제공한다.
+사용자 1인(총괄)이 여러 AI 에게 일을 맡기고, 결과를 **같은 기준으로 검토·승인·반영**하는 사무실. AI 가 일하는 모습을 보여 주는 프로그램이 아니라, **맡긴 일이 어느 버전에 어떻게 반영됐는지 책임 있게 관리**하는 프로그램을 목표로 한다.
 
-- 명세: `docs/handoff/` (v1 원본 명세 + 픽셀 사무실 1.1 추가 명세)
-- 구현 보고: `docs/IMPLEMENTATION_REPORT.md`
-- 에셋 기록: `docs/ASSET_RECORD.md`
-- 시험 결과: `docs/test-results/`
+## 무엇이 어디에 있나
+
+| 화면 | 주소 | 역할 |
+|---|---|---|
+| 대시보드 | `#/office` | 내 차례(AI 가 멈추고 나를 기다리는 것), 이어서 하기, 로드맵 요약, 팀원 상태 |
+| 픽셀 사무실 | `#/office/room` | 같은 데이터를 2.5D 장면으로. 읽기 전용 — 클릭·애니메이션이 실행·승인을 일으키지 않음 |
+| 대화 | `#/chat`, `#/chat/:id` | 프로젝트 대화방. 논의(읽기만) / 승인 범위 실행 / 검토. 체크포인트·검토·동기화·맥락 패널, 앱에서 이어하기 |
+| 프로젝트 | `#/projects`, `#/projects/:id` | 저장소·가지 흐름(작업 가지 → 빌드 → 배포 가지)·로드맵 경로. 개요에 읽기 전용 로드맵 |
+| 작업함 / 승인함 | `#/tasks`, `#/approvals` | 작업 카드(대화방과 1:1)와 결과 승인. ※ 대화방의 '판단 필요'와 아직 통합되지 않음 (아래 '진행 현황') |
+| 연결 / 팀원·자리 / 정책 | `#/settings/*` | Firebase 로그인·장부 UID, 팀원 이름·역할·자리, 심부름꾼이 실제로 강제하는 허용 명령 |
+
+## 구조 (서버 없음)
+
+```
+웹 (이 저장소, GitHub Pages)  ──읽기/쓰기──▶  Firebase Firestore (장부)  ◀──읽기/쓰기──  심부름꾼 Runner (사용자 PC, Python)
+                                              workspaces/{uid}                            └─ Claude Code CLI / Codex CLI / Gemini CLI 실행
+                                              └ threads/{id}/messages, diffs              └─ git worktree · 체크포인트 · 빌드 · push
+```
+
+- **장부**: `workspaces/{uid}` 문서 하나(프로젝트·팀원·작업·실행·승인·기기) + `threads/{id}`(대화방) + 하위 컬렉션 `messages`(메시지 원본), `diffs`(체크포인트별 변경 내용). 규칙은 소유자 이메일 1명만 허용 (`src/firebase/firestore.rules`).
+- **심부름꾼(Runner)**: `runner/runner.py` + `runner/cbao_v2.py`. 10초마다 heartbeat, 큐에 든 턴을 PC당 1개씩 실행. 대화방마다 `C:\CBAO\worktrees\<프로젝트>\<대화방>` 폴더와 가지 `office/<대화방>`. 턴이 끝나면 바뀐 파일만 체크포인트(커밋). 검토는 고정 SHA 의 읽기 전용 사본에서, 결과는 JSON 판정만 인정. 반영(작업 가지에 합치기 → 빌드 → 배포 가지 push)은 소유자 버튼으로만.
+- **AI 가 할 수 없는 것**: 커밋·push·가지 바꾸기·배포·외부 전송·비밀값 출력. `--allowedTools`/샌드박스로 강제하며, 정책 화면은 Runner 가 보고한 실제 목록을 그대로 보여 준다.
+- **외부 작업(GPT 웹·Gemini 웹·NotebookLM)**: 자동 관찰하지 않는다. 지시 묶음 복사 → 서비스에서 작업 → 결과 직접 등록.
+
+## 진행 현황 (2026-11-06)
+
+| 영역 | 상태 | 비고 |
+|---|---|---|
+| 대시보드·픽셀 사무실 | 동작 확인 (e2e 31) | 말풍선·내 차례·알림 포함 |
+| Firebase 장부·로그인 | 사용자 환경에서 동작 확인 | 규칙 적용됨 |
+| 심부름꾼 ↔ Claude/Codex 실행 | 작업 카드 흐름은 사용자 PC 에서 확인됨 (0.6) | **V2 대화방 흐름(0.8.1)은 모의 시험만 통과, PC 실측 전** |
+| 대화방: 논의/실행/검토, 체크포인트, 앱 변경 감지, 고정 SHA 검토·보완·재검토 | 코드 있음, 모의 29/29 | `docs/V2_REPORT.md` |
+| 메시지 하위 컬렉션 이전 | 코드 있음 | 원본 배열 보존 |
+| GPT 직접 연결 | 없음 | 수동 인계(복사·등록)만. API 어댑터는 별도 결정 |
+| 로드맵 | 읽기 전용 | 작업·승인과 자동 연결 없음 |
+| 결재 통합(대화 판단 + 승인함) | **없음** | 다음 설계(P1) 대상 |
+| 프로젝트 여권(원칙·보호 파일·테스트 명령·완료 조건) | 일부 (가지·빌드·배포·로드맵만) | P2 대상 |
+| 실제 배포 확인 | 없음 | push ≠ 배포 완료로만 표시 |
+
+"코드 있음"은 소스에 기능이 있다는 뜻이지 사용자 PC 에서 끝까지 입증됐다는 뜻이 아니다. 입증 기준은 `docs/V2_REPORT.md` 7절과 `docs/DATA_MODEL.md` 끝의 P0 합격표.
+
+## 작업 원칙
+
+1. 업무의 기준은 장부(서버 DB)다. 화면은 장부에 있는 사실만 보여 주고, 꾸미거나 추정하지 않는다 (연결 끊김 ≠ 실패, push ≠ 배포).
+2. AI 실행 종료 ≠ 업무 완료. 완료는 소유자 승인으로만.
+3. 검토는 고정 버전(SHA)에 대해서만 유효하다. 코드가 바뀌면 이전 검토는 '이전 버전 검토'가 된다.
+4. 대화방 = 작업 카드 (`task_id === thread_id`). 새 저장소 구조를 만들기보다 이 연결 위에 얹는다.
+5. 비밀값(서비스 계정·API 키)은 PC 에만 둔다. 저장소·장부·로그에 넣지 않는다.
+6. 대시보드·픽셀 사무실·Firebase·Runner 를 전면 재작성하지 않는다. 단계적으로 분리·확장한다.
+
+## 문서
+
+- `docs/DATA_MODEL.md` — **장부 데이터 구조 한 장** (설계서를 쓸 때 먼저 읽을 것)
+- `docs/V2_REPORT.md` — V2 구현 보고 (기능별 실제 연결/미구현, 시험, 이전·롤백, 할 일)
+- `docs/IMPLEMENTATION_REPORT.md` — 누적 구현 일지
+- `docs/handoff/` — v1·픽셀 사무실 원본 명세, `docs/ASSET_RECORD.md` — 에셋 출처, `docs/test-results/` — 시험 결과·캡처
+- `runner/README.md` — 심부름꾼 설치·설정·버전별 변경
 
 ## 실행
 
 ```sh
 npm install
 npm run dev          # 개발 서버
-npm run build        # 정적 빌드 (dist/, base=/CBAO/) — main 푸시 시 GitHub Actions 가 Pages 로 배포
-npm run preview
+npm run build        # 정적 빌드 (dist/, base=/CBAO/)
 npm test             # 단위 시험 (vitest)
-npm run e2e          # 브라우저 인수 시험 (빌드 후; Playwright + Chromium 필요)
-npm run atlas        # 픽셀 아틀라스 재생성 (public/pixel-office/)
+npm run e2e          # 브라우저 인수 시험 (빌드 후; Playwright + Chromium)
+python runner/tests/test_v2_flow.py   # 심부름꾼 수직 흐름 모의 시험 (Firebase·실제 CLI 불필요)
 ```
 
-## 데이터 소스 (설정 → 연결)
-
-| 소스 | 내용 | 실제 Runner 근거 |
-|---|---|---|
-| 서버 연결 | `VITE_AI_OFFICE_API` 로 지정한 기존 서버 API. **이 저장소에는 서버가 없어 미검증** | 서버가 제공 |
-| 로컬 (서버 미연결) | 이 브라우저에만 저장. 프로젝트·팀원 등록, 지시, 외부 작업 **직접 보고**, 승인 | 없음 — 관리형 실행 불가 |
-| 데모 | fixture 가짜 데이터. 모든 화면에 보라색 데모 배지 | 없음 (가짜) |
-
-`#/office/room` 은 실행 엔진이 아니라 읽기 전용 표현 계층이다. 클릭·캐릭터 동작·애니메이션은 작업 완료·승인·실행을 발생시키지 않는다.
+심부름꾼 설치: `runner/README.md`. 데이터 소스는 설정 → 연결에서 Firebase(기본) / 로컬(이 브라우저만) / 데모(가짜, 보라 배지) 를 고른다.
