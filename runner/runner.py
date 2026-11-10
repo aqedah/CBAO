@@ -43,7 +43,7 @@ RUNS_DIR = BASE / "runs"
 PROJECTS_DIR = BASE / "projects"
 WORKTREES_DIR = BASE / "worktrees"
 ACTIVE_RUN = {"queued", "leased", "starting", "running", "waiting_input", "stopping"}
-VERSION = "0.8.1"
+VERSION = "0.8.2"
 
 
 def now_iso() -> str:
@@ -581,6 +581,38 @@ class Runner:
         if self.tools.get("claude", {}).get("status") != "not_installed":
             log(install_claude_hooks())
         self.observer = Observer(self)
+        self.recover_interrupted()
+
+    def recover_interrupted(self):
+        """재시작 복구: 이 PC 가 맡았던 실행이 '실행 중'으로 남아 있으면 끊긴 것이다. 성공으로 꾸미지 않고 lost 로 적고 대화방을 풀어 준다."""
+        me = self.cfg["device_id"]; now = now_iso()
+        lost_runs: list = []
+
+        def wfn(w: dict) -> bool:
+            changed = False
+            for r in w.get("runs", []):
+                if r.get("device_id") == me and r.get("status") in ("leased", "starting", "running", "waiting_input", "stopping") and not r.get("observed"):
+                    r["status"] = "lost"; r["finished_at"] = now; r["last_confirmed_at"] = now
+                    r["note"] = "심부름꾼이 재시작되어 실행이 끊겼습니다."
+                    lost_runs.append(r.get("task_id")); changed = True
+            for task in w.get("tasks", []):
+                if task.get("task_id") in lost_runs and task.get("status") == "active":
+                    task["status"] = "blocked"; task["updated_at"] = now; changed = True
+            return changed
+        self.ledger.mutate(wfn)
+        n = 0
+        for t in self.ledger.recent_threads(30):
+            if t.get("status") != "running":
+                continue
+            def tfn(th: dict) -> bool:
+                if th.get("status") != "running":
+                    return False
+                self._thread_msg(th, "system", "error", "심부름꾼이 재시작되어 이 턴이 중간에 끊겼습니다. 위 내용은 끊기기 전까지의 진행 기록입니다. 같은 지시를 다시 보내면 이어서 합니다 (세션은 보존됨).")
+                th["status"] = "idle"; th["pending"] = None
+                return True
+            self.ledger.thread_mutate(t["thread_id"], tfn); n += 1
+        if lost_runs or n:
+            log(f"재시작 복구: 끊긴 실행 {len(lost_runs)}개를 lost 로, 대화방 {n}개를 대기 상태로 돌렸습니다.")
 
     # ----- 등록·heartbeat
     def register_and_heartbeat(self):

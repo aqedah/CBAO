@@ -113,7 +113,7 @@ export function ChatPage({ threadId }: { threadId: string | null }) {
             <p className="meta">프로젝트와 상대를 고르고 첫 메시지를 보내면 대화방이 열립니다. 기본은 <strong>논의</strong>(파일을 쓰지 않음)이고, 구현을 시키려면 <strong>승인 범위 실행</strong>으로 바꿔 보냅니다. 상대는 PC 에 연결된 팀원(Claude·Codex·Gemini CLI)만 고를 수 있습니다. GPT 는 API 어댑터가 아직 없어 '외부 작업(수동 보고)'입니다.</p>
           </div>
         ) : (
-          <ThreadHead thread={thread} project={project} memberName={memberName} busy={busy} act={act} onTogglePanel={() => setPanelOpen(o => !o)} panelOpen={panelOpen} />
+          <ThreadHead thread={thread} project={project} memberName={memberName} busy={busy} act={act} onTogglePanel={() => setPanelOpen(o => !o)} panelOpen={panelOpen} deviceLive={!!device} />
         )}
         <MessageList thread={thread} messages={messages.messages} loaded={messages.loaded} hasMore={messages.hasMore} legacy={messages.legacy} loadMore={messages.loadMore} memberName={memberName} headSha={headSha} />
         {msg && <div className="notice" role="status">{msg}</div>}
@@ -174,7 +174,7 @@ function lastBase(t: Thread): string | null {
   return cps.length ? cps[cps.length - 1].base_sha : null;
 }
 
-function ThreadHead({ thread, project, memberName, busy, act, onTogglePanel, panelOpen }: { thread: Thread; project?: Project; memberName: NameFn; busy: boolean; act: Act; onTogglePanel(): void; panelOpen: boolean }) {
+function ThreadHead({ thread, project, memberName, busy, act, onTogglePanel, panelOpen, deviceLive }: { thread: Thread; project?: Project; memberName: NameFn; busy: boolean; act: Act; onTogglePanel(): void; panelOpen: boolean; deviceLive: boolean }) {
   const sync = thread.sync;
   const dirty = (sync?.dirty_paths?.length ?? 0) > 0;
   const cps = thread.checkpoints ?? [];
@@ -189,6 +189,7 @@ function ThreadHead({ thread, project, memberName, busy, act, onTogglePanel, pan
       {sync?.app_writing && <Badge tone="attention">앱에서 작업 중 · 논의만</Badge>}
       <span className="spacer" />
       {thread.status === 'running' && <Badge tone="active">{memberName(thread.pending?.member_id ?? thread.member_id)} {MODE_LABEL[thread.pending?.mode ?? 'chat']} 중</Badge>}
+      {thread.status === 'running' && !deviceLive && <Badge tone="attention" title="심부름꾼이 꺼진 사이 끊긴 턴입니다. 심부름꾼을 켜면 '끊김'으로 정리되고 다시 보낼 수 있습니다.">심부름꾼 연결 없음 · 끊겼을 수 있음</Badge>}
       {thread.status === 'queued' && <><Badge tone="attention">{MODE_LABEL[thread.pending?.mode ?? 'chat']} · Runner 대기</Badge><button type="button" className="btn small" disabled={busy} onClick={() => void act(() => cancelPending(thread.thread_id), '취소했습니다.')}>취소</button></>}
       <a className="btn small" href={href(`/tasks/${thread.thread_id}`)}>작업 카드</a>
       <button type="button" className="btn small" onClick={onTogglePanel}>{panelOpen ? '맥락 닫기' : '맥락 열기'}</button>
